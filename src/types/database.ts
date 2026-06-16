@@ -73,3 +73,24 @@ export interface InventoryItem {
   is_equipped: boolean
   created_at: string
 }
+
+export interface Pdf {
+  id: string
+  user_id: string
+  campaign_id: string
+  filename: string
+  storage_path: string
+  status: 'processing' | 'indexed' | 'error'
+  created_at: string
+}
+
+export interface RagResult {
+  content: string
+  similarity: number
+  metadata: {
+    page_start: number
+    page_end: number
+    chunk_index: number
+    filename: string
+  }
+}
