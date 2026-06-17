@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
-  PanelLeftOpen, PanelLeftClose, Bot, Gauge,
+  PanelLeftOpen, PanelLeftClose, Bot, Gauge, Dices,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -15,14 +15,22 @@ import {
   getMessages,
 } from '@/lib/api'
 import type { GameState } from '@/lib/api'
+import {
+  rollFateChart,
+  rollRandomEvent,
+  ODDS_ORDER,
+  ODDS_LABELS,
+  type OddsLevel,
+} from '@/lib/fate-chart'
 import { supabase } from '@/lib/supabase'
-import { OverviewTab } from '@/components/campaign/tabs/OverviewTab'
 import { NpcTab } from '@/components/campaign/tabs/NpcTab'
 import { QuestTab } from '@/components/campaign/tabs/QuestTab'
 import { InventoryTab } from '@/components/campaign/tabs/InventoryTab'
 import { PdfLibrary } from '@/components/pdf/PdfLibrary'
 import { GameStatePanel } from '@/components/chat/GameStatePanel'
 import { Markdown } from '@/components/chat/Markdown'
+import { FateChartPanel } from '@/components/oracle/FateChartPanel'
+import { CharacterPanel } from '@/components/character/CharacterPanel'
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
 interface Message {
@@ -30,10 +38,12 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'oracle' | 'character' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
+  { id: 'character' as const, icon: User, label: 'Character' },
+  { id: 'oracle' as const, icon: Dices, label: 'Oracle' },
   { id: 'npcs' as const, icon: Swords, label: 'NPCs' },
   { id: 'quests' as const, icon: ScrollText, label: 'Quests' },
   { id: 'inventory' as const, icon: Package, label: 'Inventory' },
@@ -115,9 +125,47 @@ export function PlayPage() {
     inputRef.current?.focus()
   }
 
+  const handleOracleCommand = (text: string): boolean => {
+    const match = text.match(/^\/oracle\s*(.*)/i)
+    if (!match) return false
+
+    const arg = match[1].trim().toLowerCase().replace(/[\s_-]+/g, '_')
+    const oddsMap: Record<string, OddsLevel> = {}
+    for (const o of ODDS_ORDER) {
+      oddsMap[o.replace(/\//g, '_')] = o
+      oddsMap[ODDS_LABELS[o].toLowerCase().replace(/[\s_-]+/g, '_')] = o
+    }
+    const odds: OddsLevel = oddsMap[arg] || '50/50'
+    const cf = campaign?.chaos_factor ?? 5
+
+    const result = rollFateChart(odds, cf)
+    const style = {
+      exceptional_yes: 'Exceptional Yes!',
+      yes: 'Yes',
+      no: 'No',
+      exceptional_no: 'Exceptional No!',
+    }
+
+    let response = `**Oracle (${ODDS_LABELS[odds]}, CF ${cf}):** ${style[result.result]} (rolled ${result.roll})`
+    if (result.randomEvent) {
+      const event = rollRandomEvent()
+      response += `\n\n**Random Event:** ${event.focus} — *${event.action} + ${event.subject}*`
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', content: text },
+      { role: 'assistant', content: response },
+    ])
+    setInput('')
+    return true
+  }
+
   const handleSend = async () => {
     const text = input.trim()
     if (!text || streaming) return
+
+    if (handleOracleCommand(text)) return
 
     let session = currentSession
     if (!session) {
@@ -342,6 +390,26 @@ export function PlayPage() {
               {sidebarPanel === 'npcs' && <NpcTab campaignId={id} refreshKey={sidebarRefreshKey} />}
               {sidebarPanel === 'quests' && <QuestTab campaignId={id} refreshKey={sidebarRefreshKey} />}
               {sidebarPanel === 'inventory' && <InventoryTab campaignId={id} refreshKey={sidebarRefreshKey} />}
+              {sidebarPanel === 'character' && (
+                <CharacterPanel campaignId={id} refreshKey={sidebarRefreshKey} />
+              )}
+              {sidebarPanel === 'oracle' && campaign && (
+                <FateChartPanel
+                  chaosFactor={campaign.chaos_factor ?? 5}
+                  onOracleResult={(text) => {
+                    setMessages((prev) => [...prev, { role: 'assistant', content: text }])
+                  }}
+                  onChaosFactorChange={(newCf) => {
+                    supabase
+                      .from('campaigns')
+                      .update({ chaos_factor: newCf })
+                      .eq('id', id)
+                      .then(() => {
+                        setCampaign((prev) => prev ? { ...prev, chaos_factor: newCf } : prev)
+                      })
+                  }}
+                />
+              )}
               {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
             </div>
           </div>

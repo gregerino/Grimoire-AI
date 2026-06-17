@@ -5,6 +5,8 @@ import { pdfRoutes } from './routes/pdf'
 import { ragRoutes } from './routes/rag'
 import { chatRoutes } from './routes/chat'
 import { sessionRoutes } from './routes/session'
+import { characterRoutes } from './routes/character'
+import { oracleRoutes } from './routes/oracle'
 
 dotenv.config()
 
@@ -18,6 +20,8 @@ app.use('/api/pdf', pdfRoutes)
 app.use('/api/rag', ragRoutes)
 app.use('/api/chat', chatRoutes)
 app.use('/api/session', sessionRoutes)
+app.use('/api/character', characterRoutes)
+app.use('/api/oracle', oracleRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' })

@@ -116,6 +116,54 @@ export interface GameState {
   questUpdate?: { title: string; status: string; description?: string } | null
 }
 
+// --- Character ---
+
+export async function parseCharacterPdf(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch(`${API_BASE}/character/parse`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.error || 'Failed to parse character')
+  }
+
+  return res.json()
+}
+
+export async function saveCharacterSheet(campaignId: string, character: unknown) {
+  return jsonFetch(`${API_BASE}/character/save`, {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId, character }),
+  })
+}
+
+export async function getCharacterSheet(campaignId: string) {
+  return jsonFetch(`${API_BASE}/character/${campaignId}`)
+}
+
+// --- Oracle ---
+
+export async function rollFate(odds: string, chaosFactor: number) {
+  return jsonFetch(`${API_BASE}/oracle/fate`, {
+    method: 'POST',
+    body: JSON.stringify({ odds, chaosFactor }),
+  })
+}
+
+export async function rollEvent() {
+  return jsonFetch(`${API_BASE}/oracle/event`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}
+
+// --- Chat ---
+
 export async function sendChatMessage(
   message: string,
   campaignId: string,
