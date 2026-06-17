@@ -5,6 +5,7 @@ import type { InventoryItem } from '@/types/database'
 
 interface Props {
   campaignId: string
+  refreshKey?: number
 }
 
 const categoryIcons: Record<string, string> = {
@@ -17,7 +18,7 @@ const categoryIcons: Record<string, string> = {
   other: '📦',
 }
 
-export function InventoryTab({ campaignId }: Props) {
+export function InventoryTab({ campaignId, refreshKey }: Props) {
   const [items, setItems] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -33,7 +34,7 @@ export function InventoryTab({ campaignId }: Props) {
     setLoading(false)
   }, [campaignId])
 
-  useEffect(() => { fetchItems() }, [fetchItems])
+  useEffect(() => { fetchItems() }, [fetchItems, refreshKey])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()

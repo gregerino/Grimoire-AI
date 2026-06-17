@@ -5,6 +5,7 @@ import type { Quest } from '@/types/database'
 
 interface Props {
   campaignId: string
+  refreshKey?: number
 }
 
 const statusIcons = {
@@ -27,7 +28,7 @@ const priorityBadge = {
   personal: 'bg-purple-400/20 text-purple-400',
 }
 
-export function QuestTab({ campaignId }: Props) {
+export function QuestTab({ campaignId, refreshKey }: Props) {
   const [quests, setQuests] = useState<Quest[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -43,7 +44,7 @@ export function QuestTab({ campaignId }: Props) {
     setLoading(false)
   }, [campaignId])
 
-  useEffect(() => { fetchQuests() }, [fetchQuests])
+  useEffect(() => { fetchQuests() }, [fetchQuests, refreshKey])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()

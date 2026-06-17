@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
-  PanelLeftOpen, PanelLeftClose,
+  PanelLeftOpen, PanelLeftClose, Bot, Gauge,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -14,23 +14,26 @@ import {
   saveMessage,
   getMessages,
 } from '@/lib/api'
+import type { GameState } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { OverviewTab } from '@/components/campaign/tabs/OverviewTab'
 import { NpcTab } from '@/components/campaign/tabs/NpcTab'
 import { QuestTab } from '@/components/campaign/tabs/QuestTab'
 import { InventoryTab } from '@/components/campaign/tabs/InventoryTab'
 import { PdfLibrary } from '@/components/pdf/PdfLibrary'
-import type { Session, Campaign } from '@/types/database'
+import { GameStatePanel } from '@/components/chat/GameStatePanel'
+import { Markdown } from '@/components/chat/Markdown'
+import type { Session, Campaign, AiProvider } from '@/types/database'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
 }
 
-type SidebarPanel = 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | null
 
 const panelTabs = [
-  { id: 'overview' as const, icon: User, label: 'Overview' },
+  { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
   { id: 'npcs' as const, icon: Swords, label: 'NPCs' },
   { id: 'quests' as const, icon: ScrollText, label: 'Quests' },
   { id: 'inventory' as const, icon: Package, label: 'Inventory' },
@@ -49,6 +52,8 @@ export function PlayPage() {
   const [sidebarPanel, setSidebarPanel] = useState<SidebarPanel>(null)
   const [loadingSession, setLoadingSession] = useState(false)
   const [campaign, setCampaign] = useState<Campaign | null>(null)
+  const [aiProvider, setAiProvider] = useState<AiProvider>('claude')
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -64,7 +69,10 @@ export function PlayPage() {
       .eq('id', id)
       .single()
       .then(({ data }) => {
-        if (data) setCampaign(data as Campaign)
+        if (data) {
+          setCampaign(data as Campaign)
+          setAiProvider((data as Campaign).ai_provider || 'claude')
+        }
       })
   }, [id])
 
@@ -135,6 +143,7 @@ export function PlayPage() {
     await sendChatMessage(
       text,
       id,
+      session!.id,
       history,
       (chunk) => {
         fullResponse += chunk
@@ -147,9 +156,24 @@ export function PlayPage() {
           return updated
         })
       },
+      (_gameState: GameState) => {
+        setMessages((prev) => {
+          const updated = [...prev]
+          const last = updated[updated.length - 1]
+          if (last.role === 'assistant') {
+            updated[updated.length - 1] = {
+              ...last,
+              content: last.content.replace(/```gamestate[\s\S]*?```/g, '').trim(),
+            }
+          }
+          return updated
+        })
+        setSidebarRefreshKey((k) => k + 1)
+      },
       () => {
         setStreaming(false)
-        saveMessage(session!.id, id, 'assistant', fullResponse)
+        const cleanResponse = fullResponse.replace(/```gamestate[\s\S]*?```/g, '').trim()
+        saveMessage(session!.id, id, 'assistant', cleanResponse)
         inputRef.current?.focus()
       },
       (error) => {
@@ -162,7 +186,8 @@ export function PlayPage() {
           return updated
         })
         setStreaming(false)
-      }
+      },
+      aiProvider,
     )
   }
 
@@ -194,7 +219,7 @@ export function PlayPage() {
       <div className="flex items-center justify-between border-b border-navy bg-dark-navy/50 px-4 py-2">
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => togglePanel(sidebarPanel ? null : 'npcs')}
+            onClick={() => togglePanel(sidebarPanel ? null : 'gamestate')}
             className={`rounded p-1.5 transition-colors ${sidebarPanel ? 'bg-navy text-gold' : 'text-gray-500 hover:bg-navy hover:text-parchment'}`}
             title={sidebarPanel ? 'Close panel' : 'Open panel'}
           >
@@ -215,6 +240,25 @@ export function PlayPage() {
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              const next: AiProvider = aiProvider === 'claude' ? 'openai' : 'claude'
+              setAiProvider(next)
+              if (id) {
+                supabase
+                  .from('campaigns')
+                  .update({ ai_provider: next })
+                  .eq('id', id)
+                  .then()
+              }
+            }}
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-navy hover:text-parchment transition-colors"
+            title={`Using ${aiProvider === 'claude' ? 'Claude' : 'GPT-4o mini'} — click to switch`}
+          >
+            <Bot className="h-3.5 w-3.5" />
+            <span>{aiProvider === 'claude' ? 'Claude' : 'GPT-4o'}</span>
+          </button>
+          <div className="h-4 w-px bg-navy" />
           {currentSession && (
             <button
               onClick={endSession}
@@ -292,10 +336,12 @@ export function PlayPage() {
                   )}
                 </div>
               )}
-              {sidebarPanel === 'overview' && campaign && <OverviewTab campaign={campaign} />}
-              {sidebarPanel === 'npcs' && <NpcTab campaignId={id} />}
-              {sidebarPanel === 'quests' && <QuestTab campaignId={id} />}
-              {sidebarPanel === 'inventory' && <InventoryTab campaignId={id} />}
+              {sidebarPanel === 'gamestate' && campaign && (
+                <GameStatePanel campaign={campaign} refreshKey={sidebarRefreshKey} />
+              )}
+              {sidebarPanel === 'npcs' && <NpcTab campaignId={id} refreshKey={sidebarRefreshKey} />}
+              {sidebarPanel === 'quests' && <QuestTab campaignId={id} refreshKey={sidebarRefreshKey} />}
+              {sidebarPanel === 'inventory' && <InventoryTab campaignId={id} refreshKey={sidebarRefreshKey} />}
               {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
             </div>
           </div>
@@ -331,12 +377,18 @@ export function PlayPage() {
                       {msg.role === 'assistant' && (
                         <div className="mb-1 text-xs font-medium text-gold">Dungeon Master</div>
                       )}
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {msg.content}
-                        {streaming && i === messages.length - 1 && msg.role === 'assistant' && (
-                          <span className="ml-1 inline-block h-4 w-1.5 animate-pulse bg-gold/60" />
-                        )}
-                      </div>
+                      {msg.role === 'assistant' ? (
+                        <div>
+                          <Markdown text={msg.content} />
+                          {streaming && i === messages.length - 1 && (
+                            <span className="ml-1 inline-block h-4 w-1.5 animate-pulse bg-gold/60" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                          {msg.content}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

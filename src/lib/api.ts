@@ -103,13 +103,29 @@ export async function ragSearch(query: string, campaignId: string) {
   return res.json()
 }
 
+export interface GameState {
+  hpChange?: number
+  conditionsAdded?: string[]
+  conditionsRemoved?: string[]
+  lootFound?: { name: string; category: string; description?: string }[]
+  xpGained?: number
+  memoryUpdate?: string
+  locationChange?: string
+  chaosFactor?: number
+  npcMet?: { name: string; race?: string; disposition: string; description?: string } | null
+  questUpdate?: { title: string; status: string; description?: string } | null
+}
+
 export async function sendChatMessage(
   message: string,
   campaignId: string,
+  sessionId: string | null,
   history: { role: string; content: string }[],
   onChunk: (text: string) => void,
+  onGameState: (gs: GameState) => void,
   onDone: () => void,
-  onError: (error: string) => void
+  onError: (error: string) => void,
+  provider?: 'claude' | 'openai',
 ) {
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
@@ -117,7 +133,9 @@ export async function sendChatMessage(
     body: JSON.stringify({
       message,
       campaign_id: campaignId,
+      session_id: sessionId,
       history,
+      ...(provider && { provider }),
     }),
   })
 
@@ -156,6 +174,7 @@ export async function sendChatMessage(
       try {
         const parsed = JSON.parse(data)
         if (parsed.content) onChunk(parsed.content)
+        if (parsed.gameState) onGameState(parsed.gameState)
         if (parsed.error) onError(parsed.error)
       } catch {
         // skip malformed chunks

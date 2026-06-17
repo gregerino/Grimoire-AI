@@ -5,6 +5,7 @@ import type { Npc } from '@/types/database'
 
 interface Props {
   campaignId: string
+  refreshKey?: number
 }
 
 const dispositionColors = {
@@ -13,7 +14,7 @@ const dispositionColors = {
   hostile: 'text-red-400',
 }
 
-export function NpcTab({ campaignId }: Props) {
+export function NpcTab({ campaignId, refreshKey }: Props) {
   const [npcs, setNpcs] = useState<Npc[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -29,7 +30,7 @@ export function NpcTab({ campaignId }: Props) {
     setLoading(false)
   }, [campaignId])
 
-  useEffect(() => { fetchNpcs() }, [fetchNpcs])
+  useEffect(() => { fetchNpcs() }, [fetchNpcs, refreshKey])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()

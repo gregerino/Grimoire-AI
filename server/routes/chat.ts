@@ -1,95 +1,145 @@
 import { Router, Request, Response } from 'express'
+import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { supabaseAdmin } from '../lib/supabase-admin'
+import { buildSystemPrompt, MAX_HISTORY_MESSAGES, MAX_RESPONSE_TOKENS } from '../prompts/dm-system'
+import type { Campaign, AiProvider } from '../../src/types/database'
 
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export const chatRoutes = Router()
 
-const SYSTEM_PROMPT = `You are an expert Dungeon Master running a solo D&D 5.5e campaign. You are dramatic, descriptive, and fair. You:
+type OnText = (text: string) => void
+type OnEnd = () => void
+type OnError = (err: Error) => void
 
-- Narrate the world vividly with sensory details
-- Voice NPCs with distinct personalities
-- Track combat with clear initiative and HP
-- Present meaningful choices to the player
-- Use the provided source material faithfully when available
-- Roll dice when needed and explain the results
-- Keep the story moving and engaging
+interface StreamOpts {
+  systemPrompt: string
+  messages: { role: 'user' | 'assistant'; content: string }[]
+  onText: OnText
+  onEnd: OnEnd
+  onError: OnError
+}
 
-When source material is provided as context, use it to inform your descriptions, NPCs, locations, and plot — but weave it naturally into the narrative. Never quote the source material directly or break immersion.
+function streamClaude({ systemPrompt, messages, onText, onEnd, onError }: StreamOpts) {
+  const stream = anthropic.messages.stream({
+    model: 'claude-sonnet-4-6',
+    max_tokens: MAX_RESPONSE_TOKENS,
+    temperature: 1,
+    system: systemPrompt,
+    messages,
+  })
+  stream.on('text', onText)
+  stream.on('end', onEnd)
+  stream.on('error', onError)
+}
 
-Respond in the same language the player uses.`
+function streamOpenAI({ systemPrompt, messages, onText, onEnd, onError }: StreamOpts) {
+  const openaiMessages: OpenAI.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    ...messages,
+  ]
 
-// POST /api/chat
-// Sends a message to the AI DM with RAG context from uploaded PDFs.
+  ;(async () => {
+    try {
+      const stream = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: openaiMessages,
+        stream: true,
+        max_tokens: MAX_RESPONSE_TOKENS,
+        temperature: 0.9,
+      })
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content
+        if (content) onText(content)
+      }
+      onEnd()
+    } catch (err) {
+      onError(err instanceof Error ? err : new Error(String(err)))
+    }
+  })()
+}
+
 chatRoutes.post('/', async (req: Request, res: Response) => {
   try {
-    const { message, campaign_id, history = [] } = req.body
+    const { message, campaign_id, session_id, history = [], provider: overrideProvider } = req.body
 
     if (!message || !campaign_id) {
       res.status(400).json({ error: 'Missing message or campaign_id' })
       return
     }
 
-    // 1. Generate embedding for the player's message
-    const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: message,
-    })
-    const queryEmbedding = embeddingResponse.data[0].embedding
+    const [campaignResult, ragResults, memoriesResult] = await Promise.all([
+      supabaseAdmin
+        .from('campaigns')
+        .select('*')
+        .eq('id', campaign_id)
+        .single(),
+      getRAGContext(message, campaign_id),
+      supabaseAdmin
+        .from('campaign_memories')
+        .select('content')
+        .eq('campaign_id', campaign_id)
+        .order('created_at', { ascending: false })
+        .limit(15),
+    ])
 
-    // 2. Find relevant context from uploaded PDFs
-    const { data: ragResults } = await supabaseAdmin.rpc('match_documents', {
-      query_embedding: JSON.stringify(queryEmbedding),
-      match_campaign_id: campaign_id,
-      match_count: 5,
-    })
+    const campaign = campaignResult.data as Campaign | null
+    const memories = (memoriesResult.data || []).map(
+      (m: { content: string }) => m.content,
+    )
 
-    // 3. Build context block from RAG results
-    let contextBlock = ''
-    if (ragResults && ragResults.length > 0) {
-      const relevantChunks = ragResults
-        .filter((r: { similarity: number }) => r.similarity > 0.3)
-        .map((r: { content: string }) => r.content)
-        .join('\n\n---\n\n')
+    const provider: AiProvider =
+      overrideProvider === 'openai' || overrideProvider === 'claude'
+        ? overrideProvider
+        : campaign?.ai_provider ?? 'claude'
 
-      if (relevantChunks) {
-        contextBlock = `\n\n[SOURCE MATERIAL — use to inform your response, do not quote directly]\n${relevantChunks}\n[END SOURCE MATERIAL]`
-      }
-    }
+    const systemPrompt = buildSystemPrompt(campaign, ragResults, memories)
 
-    // 4. Build messages array for OpenAI
-    const messages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: 'system', content: SYSTEM_PROMPT + contextBlock },
-      ...history.map((h: { role: string; content: string }) => ({
+    const trimmedHistory = history.slice(-MAX_HISTORY_MESSAGES)
+    const chatMessages = [
+      ...trimmedHistory.map((h: { role: string; content: string }) => ({
         role: h.role as 'user' | 'assistant',
         content: h.content,
       })),
-      { role: 'user', content: message },
+      { role: 'user' as const, content: message },
     ]
 
-    // 5. Stream response
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
 
-    const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages,
-      stream: true,
-      max_tokens: 1000,
-      temperature: 0.9,
+    let fullResponse = ''
+
+    const streamFn = provider === 'openai' ? streamOpenAI : streamClaude
+
+    streamFn({
+      systemPrompt,
+      messages: chatMessages,
+      onText(text) {
+        fullResponse += text
+        res.write(`data: ${JSON.stringify({ content: text })}\n\n`)
+      },
+      async onEnd() {
+        const gameState = parseGameState(fullResponse)
+        if (gameState) {
+          res.write(`data: ${JSON.stringify({ gameState })}\n\n`)
+          await processGameState(gameState, campaign_id, session_id)
+        }
+        res.write('data: [DONE]\n\n')
+        res.end()
+      },
+      onError(error) {
+        const msg = error.message || 'Stream error'
+        console.error(`${provider} stream error:`, msg)
+        if (!res.writableEnded) {
+          res.write(`data: ${JSON.stringify({ error: msg })}\n\n`)
+          res.end()
+        }
+      },
     })
-
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content
-      if (content) {
-        res.write(`data: ${JSON.stringify({ content })}\n\n`)
-      }
-    }
-
-    res.write('data: [DONE]\n\n')
-    res.end()
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('Chat error:', message)
@@ -101,3 +151,153 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
     }
   }
 })
+
+async function getRAGContext(
+  query: string,
+  campaignId: string,
+): Promise<string> {
+  try {
+    const embeddingResponse = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: query,
+    })
+    const queryEmbedding = embeddingResponse.data[0].embedding
+
+    const { data: ragResults } = await supabaseAdmin.rpc('match_documents', {
+      query_embedding: JSON.stringify(queryEmbedding),
+      match_campaign_id: campaignId,
+      match_count: 5,
+    })
+
+    if (!ragResults || ragResults.length === 0) return ''
+
+    return ragResults
+      .filter((r: { similarity: number }) => r.similarity > 0.3)
+      .map((r: { content: string }) => r.content)
+      .join('\n\n---\n\n')
+  } catch {
+    return ''
+  }
+}
+
+interface GameState {
+  hpChange?: number
+  conditionsAdded?: string[]
+  conditionsRemoved?: string[]
+  lootFound?: { name: string; category: string; description?: string }[]
+  xpGained?: number
+  memoryUpdate?: string
+  locationChange?: string
+  chaosFactor?: number
+  npcMet?: {
+    name: string
+    race?: string
+    disposition: string
+    description?: string
+  } | null
+  questUpdate?: {
+    title: string
+    status: string
+    description?: string
+  } | null
+}
+
+function parseGameState(text: string): GameState | null {
+  const match = text.match(/```gamestate\s*\n([\s\S]*?)\n```/)
+  if (!match) return null
+  try {
+    return JSON.parse(match[1])
+  } catch {
+    return null
+  }
+}
+
+async function processGameState(
+  gs: GameState,
+  campaignId: string,
+  sessionId?: string,
+): Promise<void> {
+  const updates: Record<string, unknown> = {}
+
+  if (gs.chaosFactor) {
+    const { data: campaign } = await supabaseAdmin
+      .from('campaigns')
+      .select('chaos_factor')
+      .eq('id', campaignId)
+      .single()
+    if (campaign) {
+      const newChaos = Math.max(1, Math.min(9, campaign.chaos_factor + gs.chaosFactor))
+      updates.chaos_factor = newChaos
+    }
+  }
+
+  if (gs.hpChange && gs.hpChange !== 0) {
+    const { data: campaign } = await supabaseAdmin
+      .from('campaigns')
+      .select('current_hp')
+      .eq('id', campaignId)
+      .single()
+    if (campaign?.current_hp != null) {
+      updates.current_hp = campaign.current_hp + gs.hpChange
+    }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await supabaseAdmin
+      .from('campaigns')
+      .update(updates)
+      .eq('id', campaignId)
+  }
+
+  if (gs.memoryUpdate) {
+    await supabaseAdmin.from('campaign_memories').insert({
+      campaign_id: campaignId,
+      session_id: sessionId || null,
+      content: gs.memoryUpdate,
+    })
+  }
+
+  if (gs.npcMet) {
+    await supabaseAdmin.from('npcs').insert({
+      campaign_id: campaignId,
+      name: gs.npcMet.name,
+      race: gs.npcMet.race || null,
+      description: gs.npcMet.description || null,
+      disposition: gs.npcMet.disposition || 'neutral',
+    })
+  }
+
+  if (gs.questUpdate) {
+    const { data: existing } = await supabaseAdmin
+      .from('quests')
+      .select('id')
+      .eq('campaign_id', campaignId)
+      .eq('title', gs.questUpdate.title)
+      .single()
+
+    if (existing) {
+      await supabaseAdmin
+        .from('quests')
+        .update({ status: gs.questUpdate.status })
+        .eq('id', existing.id)
+    } else {
+      await supabaseAdmin.from('quests').insert({
+        campaign_id: campaignId,
+        title: gs.questUpdate.title,
+        description: gs.questUpdate.description || null,
+        status: gs.questUpdate.status || 'active',
+      })
+    }
+  }
+
+  if (gs.lootFound && gs.lootFound.length > 0) {
+    const items = gs.lootFound.map((item) => ({
+      campaign_id: campaignId,
+      name: item.name,
+      description: item.description || null,
+      category: item.category || 'other',
+      quantity: 1,
+    }))
+    await supabaseAdmin.from('inventory_items').insert(items)
+  }
+}

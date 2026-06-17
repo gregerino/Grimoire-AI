@@ -6,6 +6,8 @@ export interface User {
   created_at: string
 }
 
+export type AiProvider = 'claude' | 'openai'
+
 export interface Campaign {
   id: string
   user_id: string
@@ -15,6 +17,10 @@ export interface Campaign {
   character_name: string | null
   character_class: string | null
   character_level: number
+  ai_provider: AiProvider
+  chaos_factor: number
+  current_hp: number | null
+  max_hp: number | null
   status: 'active' | 'paused' | 'completed'
   created_at: string
   updated_at: string
