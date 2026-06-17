@@ -114,6 +114,24 @@ export interface GameState {
   chaosFactor?: number
   npcMet?: { name: string; race?: string; disposition: string; description?: string } | null
   questUpdate?: { title: string; status: string; description?: string } | null
+  combatStart?: {
+    enemies: Array<{
+      name: string
+      initiative: number
+      hp: { current: number; max: number }
+      ac: number
+    }>
+    playerInitiative?: number
+  }
+  combatEnd?: boolean
+  combatDamage?: Array<{ target: string; amount: number; type?: string }>
+  combatHealing?: Array<{ target: string; amount: number }>
+  conditionsApplied?: Array<{ target: string; condition: string }>
+  conditionsLifted?: Array<{ target: string; condition: string }>
+  spellSlotUsed?: { level: number }
+  deathSaveResult?: { roll: number }
+  restType?: 'short' | 'long'
+  hitDiceUsed?: number
 }
 
 // --- Character ---
@@ -159,6 +177,19 @@ export async function rollEvent() {
   return jsonFetch(`${API_BASE}/oracle/event`, {
     method: 'POST',
     body: JSON.stringify({}),
+  })
+}
+
+// --- Rest ---
+
+export function performRest(
+  campaignId: string,
+  type: 'short' | 'long',
+  hitDiceUsed?: number,
+) {
+  return jsonFetch(`${API_BASE}/character/${campaignId}/rest`, {
+    method: 'PATCH',
+    body: JSON.stringify({ type, hitDiceUsed }),
   })
 }
 

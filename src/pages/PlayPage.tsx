@@ -3,9 +3,10 @@ import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
-  PanelLeftOpen, PanelLeftClose, Bot, Gauge, Dices,
+  PanelLeftOpen, PanelLeftClose, Bot, Gauge, Dices, Shield,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useCombatStore } from '@/stores/combatStore'
 import {
   sendChatMessage,
   createSession,
@@ -13,8 +14,10 @@ import {
   updateSession,
   saveMessage,
   getMessages,
+  getCharacterSheet,
 } from '@/lib/api'
 import type { GameState } from '@/lib/api'
+import type { Condition } from '@/types/combat'
 import {
   rollFateChart,
   rollRandomEvent,
@@ -31,6 +34,7 @@ import { GameStatePanel } from '@/components/chat/GameStatePanel'
 import { Markdown } from '@/components/chat/Markdown'
 import { FateChartPanel } from '@/components/oracle/FateChartPanel'
 import { CharacterPanel } from '@/components/character/CharacterPanel'
+import { CombatTracker } from '@/components/combat/CombatTracker'
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
 interface Message {
@@ -38,10 +42,11 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'oracle' | 'character' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'oracle' | 'character' | 'combat' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
+  { id: 'combat' as const, icon: Shield, label: 'Combat' },
   { id: 'character' as const, icon: User, label: 'Character' },
   { id: 'oracle' as const, icon: Dices, label: 'Oracle' },
   { id: 'npcs' as const, icon: Swords, label: 'NPCs' },
@@ -204,7 +209,7 @@ export function PlayPage() {
           return updated
         })
       },
-      (_gameState: GameState) => {
+      async (gameState: GameState) => {
         setMessages((prev) => {
           const updated = [...prev]
           const last = updated[updated.length - 1]
@@ -217,6 +222,57 @@ export function PlayPage() {
           return updated
         })
         setSidebarRefreshKey((k) => k + 1)
+
+        const combat = useCombatStore.getState()
+
+        if (gameState.combatStart) {
+          let charData: Record<string, unknown> | null = null
+          try {
+            const result = await getCharacterSheet(id)
+            charData = result.character
+          } catch { /* no character sheet — use campaign defaults */ }
+
+          if (charData) {
+            const dexMod = Math.floor((((charData.stats as Record<string, number>)?.DEX ?? 10) - 10) / 2)
+            const playerInit = gameState.combatStart.playerInitiative ?? (Math.floor(Math.random() * 20) + 1 + dexMod)
+            combat.startCombat(gameState.combatStart.enemies, {
+              name: (charData.name as string) || campaign?.character_name || 'Player',
+              initiative: playerInit,
+              hp: { current: (charData.hp as { current: number; max: number })?.current ?? campaign?.current_hp ?? 20, max: (charData.hp as { current: number; max: number })?.max ?? campaign?.max_hp ?? 20 },
+              ac: (charData.ac as number) ?? 10,
+              conditions: (charData.activeConditions as Condition[]) ?? [],
+            })
+          } else {
+            combat.startCombat(gameState.combatStart.enemies, {
+              name: campaign?.character_name || 'Player',
+              initiative: gameState.combatStart.playerInitiative ?? 10,
+              hp: { current: campaign?.current_hp ?? 20, max: campaign?.max_hp ?? 20 },
+              ac: 10,
+            })
+          }
+          setSidebarPanel('combat')
+          setSidebarOpen(true)
+        }
+
+        if (gameState.combatEnd) combat.endCombat()
+
+        if (gameState.combatDamage) {
+          for (const d of gameState.combatDamage) combat.applyDamage(d.target, d.amount)
+        }
+
+        if (gameState.combatHealing) {
+          for (const h of gameState.combatHealing) combat.applyHealing(h.target, h.amount)
+        }
+
+        if (gameState.conditionsApplied) {
+          for (const c of gameState.conditionsApplied) combat.addCondition(c.target, c.condition as Condition)
+        }
+
+        if (gameState.conditionsLifted) {
+          for (const c of gameState.conditionsLifted) combat.removeCondition(c.target, c.condition as Condition)
+        }
+
+        if (gameState.deathSaveResult) combat.rollDeathSave(gameState.deathSaveResult.roll)
       },
       () => {
         setStreaming(false)
@@ -332,23 +388,14 @@ export function PlayPage() {
           <div className="flex w-80 shrink-0 flex-col border-r border-navy bg-dark-navy/30">
             {/* Sidebar tab bar */}
             <div className="flex border-b border-navy">
-              {panelTabs.map((tab) => {
-                const Icon = tab.icon
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => togglePanel(tab.id)}
-                    className={`flex flex-1 items-center justify-center p-2 transition-colors ${
-                      sidebarPanel === tab.id
-                        ? 'border-b-2 border-gold text-gold'
-                        : 'text-gray-600 hover:text-gray-400'
-                    }`}
-                    title={tab.label}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </button>
-                )
-              })}
+              {panelTabs.map((tab) => (
+                <SidebarTabButton
+                  key={tab.id}
+                  tab={tab}
+                  isActive={sidebarPanel === tab.id}
+                  onToggle={() => togglePanel(tab.id)}
+                />
+              ))}
             </div>
 
             {/* Sidebar content */}
@@ -410,6 +457,7 @@ export function PlayPage() {
                   }}
                 />
               )}
+              {sidebarPanel === 'combat' && <CombatTracker />}
               {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
             </div>
           </div>
@@ -494,5 +542,38 @@ export function PlayPage() {
 
       </div>
     </div>
+  )
+}
+
+function SidebarTabButton({
+  tab,
+  isActive,
+  onToggle,
+}: {
+  tab: { id: string; icon: React.ComponentType<{ className?: string }>; label: string }
+  isActive: boolean
+  onToggle: () => void
+}) {
+  const inCombat = useCombatStore((s) => s.inCombat)
+  const showDot = tab.id === 'combat' && inCombat
+  const Icon = tab.icon
+
+  return (
+    <button
+      onClick={onToggle}
+      className={`relative flex flex-1 items-center justify-center p-2 transition-colors ${
+        isActive
+          ? 'border-b-2 border-gold text-gold'
+          : showDot
+            ? 'text-red-400'
+            : 'text-gray-600 hover:text-gray-400'
+      }`}
+      title={tab.label}
+    >
+      <Icon className="h-4 w-4" />
+      {showDot && (
+        <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
+      )}
+    </button>
   )
 }

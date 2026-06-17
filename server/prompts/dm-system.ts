@@ -60,32 +60,78 @@ When you consult the oracle, write it into the fiction naturally:
 - When a random event occurs, interpret the Focus + Action + Subject creatively
 - Weave it into the current scene as an interruption, revelation, or complication
 
+# Combat System
+When combat begins, include a combatStart block with all enemies. The app tracks initiative, HP, and turns automatically.
+
+## Starting Combat
+Include combatStart with every enemy. Roll initiative for the player too (d20 + DEX modifier).
+Announce turn order in your narrative. Example gamestate:
+  "combatStart": { "enemies": [{ "name": "Goblin", "initiative": 14, "hp": { "current": 7, "max": 7 }, "ac": 15 }], "playerInitiative": 12 }
+
+## During Combat
+- Use combatDamage for ALL damage: [{ "target": "player", "amount": 8 }, { "target": "enemy-Goblin-0", "amount": 12 }]
+- Use combatHealing for healing: [{ "target": "player", "amount": 5 }]
+- For multiple enemies of the same type, append index: "enemy-Goblin-0", "enemy-Goblin-1"
+- For unique enemies: "enemy-Dragon-0"
+- Track whose turn it is and announce it
+
+## Ending Combat
+When all enemies are defeated or the encounter resolves: "combatEnd": true
+
+## Spells & Resources
+When the player casts a leveled spell: "spellSlotUsed": { "level": 2 }
+
+## Death Saving Throws (5.5e)
+When the player is at 0 HP, roll death saves at the start of their turn:
+- Roll d20 and report: "deathSaveResult": { "roll": 14 }
+- 10+ = success, 1-9 = failure, nat 1 = 2 failures, nat 20 = regain 1 HP
+- 3 successes = stabilized, 3 failures = dead
+- Damage at 0 HP = automatic failure (critical = 2 failures)
+
+## Conditions
+Apply conditions: "conditionsApplied": [{ "target": "player", "condition": "poisoned" }]
+Remove conditions: "conditionsLifted": [{ "target": "enemy-Goblin-0", "condition": "prone" }]
+Valid conditions: blinded, charmed, deafened, exhaustion, frightened, grappled, incapacitated, invisible, paralyzed, petrified, poisoned, prone, restrained, stunned, unconscious, concentrating
+
+## Resting
+When the player takes a rest: "restType": "short" or "restType": "long"
+For short rests, include how many hit dice to spend: "hitDiceUsed": 2
+
 # Structured Output
-After your narrative, you MAY include a JSON block to update game state. Wrap it exactly like this:
+After your narrative, you MUST include a JSON block to update game state whenever something mechanically relevant happens (combat, damage, healing, loot, conditions, location changes, etc.). Wrap it exactly like this:
 
 \`\`\`gamestate
 {
   "hpChange": 0,
-  "conditionsAdded": [],
-  "conditionsRemoved": [],
   "lootFound": [],
   "xpGained": 0,
   "memoryUpdate": "",
   "locationChange": "",
   "chaosFactor": 0,
   "npcMet": null,
-  "questUpdate": null
+  "questUpdate": null,
+  "combatStart": { "enemies": [...], "playerInitiative": 12 },
+  "combatDamage": [{ "target": "enemy-Goblin-0", "amount": 7 }],
+  "combatHealing": [{ "target": "player", "amount": 5 }],
+  "combatEnd": true,
+  "conditionsApplied": [{ "target": "player", "condition": "poisoned" }],
+  "conditionsLifted": [{ "target": "player", "condition": "poisoned" }],
+  "spellSlotUsed": { "level": 1 },
+  "deathSaveResult": { "roll": 14 },
+  "restType": "short",
+  "hitDiceUsed": 2
 }
 \`\`\`
 
 Rules for the gamestate block:
 - Only include fields that changed. Omit unchanged fields.
-- hpChange: negative for damage, positive for healing
+- hpChange: negative for damage, positive for healing (use for out-of-combat HP changes; in combat use combatDamage/combatHealing instead)
 - memoryUpdate: one sentence summarising the most important thing that happened (for long-term campaign memory)
 - chaosFactor: the CHANGE (+1, -1, or 0), not the absolute value
 - npcMet: { "name": "...", "race": "...", "disposition": "friendly|neutral|hostile", "description": "..." } or null
 - questUpdate: { "title": "...", "status": "active|completed|failed", "description": "..." } or null
 - lootFound: [{ "name": "...", "category": "weapon|armor|potion|scroll|gear|treasure|other", "description": "..." }]
+- CRITICAL: When combat begins, you MUST include combatStart with enemies array and playerInitiative. The app's combat tracker depends on this — without it, combat UI won't activate.
 - Do NOT include the gamestate block for purely conversational responses
 - The narrative MUST be complete on its own — never put story content inside the JSON
 
@@ -99,6 +145,7 @@ export function buildSystemPrompt(
   campaign: Campaign | null,
   ragContext: string,
   memories: string[],
+  activeConditions?: string[],
 ): string {
   const parts = [BASE_PROMPT]
 
@@ -109,7 +156,7 @@ Campaign: ${campaign.name}
 Setting: ${campaign.setting || 'Standard fantasy'}
 Character: ${campaign.character_name || 'Unknown'}, Level ${campaign.character_level} ${campaign.character_class || 'Adventurer'}
 Description: ${campaign.description || 'A new adventure begins.'}
-Chaos Factor: ${campaign.chaos_factor ?? 5}/9
+Chaos Factor: ${campaign.chaos_factor ?? 5}/9${activeConditions && activeConditions.length > 0 ? `\nActive Conditions: ${activeConditions.join(', ')}` : ''}
 [END CAMPAIGN CONTEXT]`)
   }
 

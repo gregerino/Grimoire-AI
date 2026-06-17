@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Heart, Flame, MapPin, AlertTriangle, Brain, ChevronDown, ChevronUp } from 'lucide-react'
+import { Heart, Flame, MapPin, AlertTriangle, Brain, ChevronDown, ChevronUp, Swords } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useCombatStore } from '@/stores/combatStore'
 import type { Campaign } from '@/types/database'
 
 interface Memory {
@@ -70,6 +71,9 @@ export function GameStatePanel({ campaign, refreshKey }: Props) {
       <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500">
         Game State
       </h3>
+
+      {/* Combat Status */}
+      <CombatStatusBadge />
 
       {/* HP Bar */}
       {hp != null && maxHp != null ? (
@@ -188,6 +192,23 @@ export function GameStatePanel({ campaign, refreshKey }: Props) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function CombatStatusBadge() {
+  const inCombat = useCombatStore((s) => s.inCombat)
+  const round = useCombatStore((s) => s.round)
+
+  if (!inCombat) return null
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+      <Swords className="h-4 w-4 text-red-400" />
+      <span className="text-xs font-medium text-red-400">In Combat</span>
+      <span className="ml-auto rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-400">
+        Round {round}
+      </span>
     </div>
   )
 }

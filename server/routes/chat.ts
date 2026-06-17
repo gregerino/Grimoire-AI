@@ -96,7 +96,19 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
         ? overrideProvider
         : campaign?.ai_provider ?? 'claude'
 
-    const systemPrompt = buildSystemPrompt(campaign, ragResults, memories)
+    let activeConditions: string[] = []
+    if (campaign) {
+      const { data: sheet } = await supabaseAdmin
+        .from('character_sheets')
+        .select('data')
+        .eq('campaign_id', campaign_id)
+        .single()
+      if (sheet?.data) {
+        activeConditions = ((sheet.data as Record<string, unknown>).activeConditions as string[]) ?? []
+      }
+    }
+
+    const systemPrompt = buildSystemPrompt(campaign, ragResults, memories, activeConditions)
 
     const trimmedHistory = history.slice(-MAX_HISTORY_MESSAGES)
     const chatMessages = [
@@ -200,6 +212,24 @@ interface GameState {
     status: string
     description?: string
   } | null
+  combatStart?: {
+    enemies: Array<{
+      name: string
+      initiative: number
+      hp: { current: number; max: number }
+      ac: number
+    }>
+    playerInitiative?: number
+  }
+  combatEnd?: boolean
+  combatDamage?: Array<{ target: string; amount: number; type?: string }>
+  combatHealing?: Array<{ target: string; amount: number }>
+  conditionsApplied?: Array<{ target: string; condition: string }>
+  conditionsLifted?: Array<{ target: string; condition: string }>
+  spellSlotUsed?: { level: number }
+  deathSaveResult?: { roll: number }
+  restType?: 'short' | 'long'
+  hitDiceUsed?: number
 }
 
 function parseGameState(text: string): GameState | null {
@@ -299,5 +329,76 @@ async function processGameState(
       quantity: 1,
     }))
     await supabaseAdmin.from('inventory_items').insert(items)
+  }
+
+  if (gs.spellSlotUsed) {
+    const { data: sheet } = await supabaseAdmin
+      .from('character_sheets')
+      .select('data')
+      .eq('campaign_id', campaignId)
+      .single()
+
+    if (sheet?.data) {
+      const charData = sheet.data as Record<string, unknown>
+      const slots = charData.spellSlots as Record<string, { used: number; max: number }> | undefined
+      const level = String(gs.spellSlotUsed.level)
+      if (slots?.[level] && slots[level].used < slots[level].max) {
+        slots[level].used += 1
+        await supabaseAdmin
+          .from('character_sheets')
+          .update({ data: charData, updated_at: new Date().toISOString() })
+          .eq('campaign_id', campaignId)
+      }
+    }
+  }
+
+  if (gs.hpChange && gs.hpChange !== 0) {
+    const { data: sheet } = await supabaseAdmin
+      .from('character_sheets')
+      .select('data')
+      .eq('campaign_id', campaignId)
+      .single()
+
+    if (sheet?.data) {
+      const charData = sheet.data as Record<string, unknown>
+      const hp = charData.hp as { current: number; max: number; temp: number } | undefined
+      if (hp) {
+        hp.current = Math.max(0, Math.min(hp.max, hp.current + gs.hpChange))
+        await supabaseAdmin
+          .from('character_sheets')
+          .update({ data: charData, updated_at: new Date().toISOString() })
+          .eq('campaign_id', campaignId)
+      }
+    }
+  }
+
+  if (gs.conditionsApplied || gs.conditionsLifted) {
+    const { data: sheet } = await supabaseAdmin
+      .from('character_sheets')
+      .select('data')
+      .eq('campaign_id', campaignId)
+      .single()
+
+    if (sheet?.data) {
+      const charData = sheet.data as Record<string, unknown>
+      let conditions = (charData.activeConditions as string[] | undefined) ?? []
+
+      for (const c of gs.conditionsApplied ?? []) {
+        if (c.target === 'player' && !conditions.includes(c.condition)) {
+          conditions.push(c.condition)
+        }
+      }
+      for (const c of gs.conditionsLifted ?? []) {
+        if (c.target === 'player') {
+          conditions = conditions.filter((cond) => cond !== c.condition)
+        }
+      }
+
+      charData.activeConditions = conditions
+      await supabaseAdmin
+        .from('character_sheets')
+        .update({ data: charData, updated_at: new Date().toISOString() })
+        .eq('campaign_id', campaignId)
+    }
   }
 }

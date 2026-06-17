@@ -2,8 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Heart, Shield, Footprints, Upload, Loader2,
   Sword, BookOpen, Star, Backpack, ChevronDown, ChevronUp,
+  Moon, AlertCircle,
 } from 'lucide-react'
 import { getCharacterSheet, parseCharacterPdf, saveCharacterSheet } from '@/lib/api'
+import { ConditionBadge } from '@/components/combat/ConditionBadge'
+import { RestDialog } from '@/components/combat/RestDialog'
+import type { Condition } from '@/types/combat'
 
 interface CharacterSheet {
   name: string
@@ -24,6 +28,8 @@ interface CharacterSheet {
   proficiencies: string[]
   equipment: Array<{ name: string; equipped: boolean }>
   currencies: { gp: number; sp: number; cp: number; ep: number; pp: number }
+  hitDice?: { current: number; max: number }
+  activeConditions?: Condition[]
 }
 
 interface Props {
@@ -44,6 +50,7 @@ export function CharacterPanel({ campaignId, refreshKey }: Props) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [showRestDialog, setShowRestDialog] = useState(false)
 
   const fetchCharacter = useCallback(async () => {
     setLoading(true)
@@ -127,10 +134,19 @@ export function CharacterPanel({ campaignId, refreshKey }: Props) {
         <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500">
           Character Sheet
         </h3>
-        <label className="cursor-pointer rounded p-1 text-gray-600 transition-colors hover:text-gold">
-          <Upload className="h-3.5 w-3.5" />
-          <input type="file" accept=".pdf" onChange={handleUpload} className="hidden" />
-        </label>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowRestDialog(true)}
+            className="rounded p-1 text-gray-600 transition-colors hover:text-gold"
+            title="Take a rest"
+          >
+            <Moon className="h-3.5 w-3.5" />
+          </button>
+          <label className="cursor-pointer rounded p-1 text-gray-600 transition-colors hover:text-gold">
+            <Upload className="h-3.5 w-3.5" />
+            <input type="file" accept=".pdf" onChange={handleUpload} className="hidden" />
+          </label>
+        </div>
       </div>
 
       {/* Name & Class */}
@@ -163,6 +179,23 @@ export function CharacterPanel({ campaignId, refreshKey }: Props) {
           />
         </div>
       </div>
+
+      {/* Active Conditions */}
+      {character.activeConditions && character.activeConditions.length > 0 && (
+        <div className="rounded-xl border border-navy bg-dark-navy p-3">
+          <div className="mb-2 flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
+            <span className="text-[10px] uppercase tracking-wider text-gray-500">
+              Conditions
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {character.activeConditions.map((cond) => (
+              <ConditionBadge key={cond} condition={cond} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* AC & Speed */}
       <div className="grid grid-cols-2 gap-2">
@@ -202,14 +235,28 @@ export function CharacterPanel({ campaignId, refreshKey }: Props) {
               <div key={slot.level} className="flex items-center gap-2">
                 <span className="w-8 text-[10px] text-gray-500">Lvl {slot.level}</span>
                 <div className="flex flex-1 gap-1">
-                  {Array.from({ length: slot.max }, (_, i) => (
-                    <div
-                      key={i}
-                      className={`h-3 flex-1 rounded-full ${
-                        i < slot.max - slot.used ? 'bg-blue-500' : 'bg-navy'
-                      }`}
-                    />
-                  ))}
+                  {Array.from({ length: slot.max }, (_, i) => {
+                    const available = i < slot.max - slot.used
+                    return (
+                      <button
+                        key={i}
+                        onClick={async () => {
+                          const updated = { ...character }
+                          const slots = { ...updated.spellSlots }
+                          const s = { ...slots[slot.level] }
+                          s.used = available ? s.used + 1 : Math.max(0, s.used - 1)
+                          slots[slot.level] = s
+                          updated.spellSlots = slots
+                          setCharacter(updated)
+                          await saveCharacterSheet(campaignId, updated)
+                        }}
+                        className={`h-3 flex-1 rounded-full transition-colors cursor-pointer hover:opacity-80 ${
+                          available ? 'bg-blue-500' : 'bg-navy'
+                        }`}
+                        title={available ? 'Click to use slot' : 'Click to restore slot'}
+                      />
+                    )
+                  })}
                 </div>
                 <span className="text-[10px] text-gray-500">
                   {slot.max - slot.used}/{slot.max}
@@ -287,6 +334,16 @@ export function CharacterPanel({ campaignId, refreshKey }: Props) {
           {character.currencies.sp > 0 && <CurrencyBadge label="SP" value={character.currencies.sp} color="text-gray-400" />}
           {character.currencies.cp > 0 && <CurrencyBadge label="CP" value={character.currencies.cp} color="text-amber-600" />}
         </div>
+      )}
+
+      {/* Rest Dialog */}
+      {showRestDialog && (
+        <RestDialog
+          campaignId={campaignId}
+          character={character}
+          onClose={() => setShowRestDialog(false)}
+          onComplete={fetchCharacter}
+        />
       )}
     </div>
   )
