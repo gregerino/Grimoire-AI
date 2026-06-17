@@ -139,6 +139,7 @@ export interface GameState {
   deathSaveResult?: { roll: number }
   restType?: 'short' | 'long'
   hitDiceUsed?: number
+  speech?: Array<{ speaker: string; text: string }>
 }
 
 // --- Character ---
@@ -209,7 +210,38 @@ export function aiUpdateNpc(npcId: string, context: string) {
   })
 }
 
+// --- TTS ---
+
+export async function fetchTtsAudio(text: string, speaker: string, voiceId?: string | null): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/tts/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, speaker, ...(voiceId ? { voiceId } : {}) }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || 'TTS failed')
+  }
+  return res.blob()
+}
+
+export interface TtsVoice {
+  id: string
+  name: string
+  description: string
+}
+
+export async function fetchTtsVoices(): Promise<TtsVoice[]> {
+  const res = await jsonFetch(`${API_BASE}/tts/voices`)
+  return res.voices
+}
+
 // --- Chat ---
+
+export interface SpeechSegment {
+  speaker: string
+  text: string
+}
 
 export async function sendChatMessage(
   message: string,
@@ -218,9 +250,11 @@ export async function sendChatMessage(
   history: { role: string; content: string }[],
   onChunk: (text: string) => void,
   onGameState: (gs: GameState) => void,
-  onDone: () => void,
+  onDone: (speechSegments?: SpeechSegment[]) => void,
   onError: (error: string) => void,
   provider?: 'claude' | 'openai',
+  ttsLanguage?: string,
+  onSpeechSegments?: (segments: SpeechSegment[]) => void,
 ) {
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
@@ -231,6 +265,7 @@ export async function sendChatMessage(
       session_id: sessionId,
       history,
       ...(provider && { provider }),
+      ...(ttsLanguage && { ttsLanguage }),
     }),
   })
 
@@ -248,6 +283,7 @@ export async function sendChatMessage(
 
   const decoder = new TextDecoder()
   let buffer = ''
+  let speechSegments: SpeechSegment[] | undefined
 
   while (true) {
     const { done, value } = await reader.read()
@@ -262,7 +298,7 @@ export async function sendChatMessage(
       const data = line.slice(6)
 
       if (data === '[DONE]') {
-        onDone()
+        onDone(speechSegments)
         return
       }
 
@@ -270,6 +306,10 @@ export async function sendChatMessage(
         const parsed = JSON.parse(data)
         if (parsed.content) onChunk(parsed.content)
         if (parsed.gameState) onGameState(parsed.gameState)
+        if (parsed.speechSegments) {
+          speechSegments = parsed.speechSegments
+          onSpeechSegments?.(parsed.speechSegments)
+        }
         if (parsed.error) onError(parsed.error)
       } catch {
         // skip malformed chunks
@@ -277,5 +317,5 @@ export async function sendChatMessage(
     }
   }
 
-  onDone()
+  onDone(speechSegments)
 }

@@ -4,6 +4,7 @@ import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
   PanelLeftOpen, PanelLeftClose, Bot, Gauge, Dices, Shield,
+  Volume2, VolumeX, Square, Pause, Play,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCombatStore } from '@/stores/combatStore'
@@ -37,6 +38,10 @@ import { FateChartPanel } from '@/components/oracle/FateChartPanel'
 import { CharacterPanel } from '@/components/character/CharacterPanel'
 import { CombatTracker } from '@/components/combat/CombatTracker'
 import { SessionHistory } from '@/components/session/SessionHistory'
+import { SpeechSettingsPanel } from '@/components/settings/SpeechSettingsPanel'
+import { useSpeech } from '@/hooks/useSpeech'
+import { useSpeechStore } from '@/stores/speechStore'
+
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
 interface Message {
@@ -44,7 +49,7 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'oracle' | 'character' | 'combat' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'oracle' | 'character' | 'combat' | 'speech' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
@@ -56,6 +61,7 @@ const panelTabs = [
   { id: 'inventory' as const, icon: Package, label: 'Inventory' },
   { id: 'library' as const, icon: FileText, label: 'PDFs' },
   { id: 'history' as const, icon: History, label: 'Sessions' },
+  { id: 'speech' as const, icon: Volume2, label: 'Röst' },
 ]
 
 export function PlayPage() {
@@ -73,6 +79,12 @@ export function PlayPage() {
   const [summarizing, setSummarizing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const { speakPlain, enqueueSentence, stop: stopSpeech, pause: pauseSpeech, resume: resumeSpeech, speaking, paused: speechPaused } = useSpeech()
+  const speechEnabled = useSpeechStore((s) => s.enabled)
+  const autoRead = useSpeechStore((s) => s.autoRead)
+  const ttsLanguage = useSpeechStore((s) => s.ttsLanguage)
+  const sentenceBufferRef = useRef('')
+  const ttsDisplayLengthRef = useRef(0)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -102,6 +114,46 @@ export function PlayPage() {
   useEffect(() => {
     fetchSessions()
   }, [fetchSessions])
+
+  const cleanForSpeech = (text: string) =>
+    text
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/^#{1,3}\s+.+$/gm, '')
+      .replace(/\[.*?\]\(.*?\)/g, '')
+      .replace(/\[.*?\]/g, '')
+      .trim()
+
+  const flushSentenceBuffer = useCallback(() => {
+    const text = cleanForSpeech(sentenceBufferRef.current)
+    sentenceBufferRef.current = ''
+    if (text) {
+      const speaker = /^[""“]/.test(text) ? 'elder' : 'narrator'
+      enqueueSentence(text, speaker as import('@/stores/speechStore').VoiceProfileKey)
+    }
+  }, [enqueueSentence])
+
+  const handleStreamChunkForTts = useCallback(
+    (chunk: string) => {
+      if (!speechEnabled || !autoRead) return
+      sentenceBufferRef.current += chunk
+      while (true) {
+        const buf = sentenceBufferRef.current
+        const match = buf.match(/[.!?…]["'""'']*\s/)
+        if (!match || match.index === undefined) break
+        const matchEnd = match.index + match[0].length
+        const sentence = buf.slice(0, matchEnd - 1)
+        sentenceBufferRef.current = buf.slice(matchEnd)
+        const cleaned = cleanForSpeech(sentence)
+        if (cleaned) {
+          const speaker = /^[""“]/.test(cleaned) ? 'elder' : 'narrator'
+          enqueueSentence(cleaned, speaker as import('@/stores/speechStore').VoiceProfileKey)
+        }
+      }
+    },
+    [speechEnabled, autoRead, enqueueSentence],
+  )
 
   if (!id || !user) return null
 
@@ -184,6 +236,9 @@ export function PlayPage() {
 
     setInput('')
     setStreaming(true)
+    sentenceBufferRef.current = ''
+    ttsDisplayLengthRef.current = 0
+    stopSpeech()
 
     const userMessage: Message = { role: 'user', content: text }
     setMessages((prev) => [...prev, userMessage])
@@ -202,11 +257,21 @@ export function PlayPage() {
       history,
       (chunk) => {
         fullResponse += chunk
+        const display = fullResponse
+          .replace(/```gamestate[\s\S]*?```/g, '')
+          .replace(/```speech[\s\S]*?```/g, '')
+          .replace(/```(?:gamestate|speech)[\s\S]*$/g, '')
+          .trim()
+        const prevLen = ttsDisplayLengthRef.current
+        if (display.length > prevLen) {
+          handleStreamChunkForTts(display.slice(prevLen))
+          ttsDisplayLengthRef.current = display.length
+        }
         setMessages((prev) => {
           const updated = [...prev]
           const last = updated[updated.length - 1]
           if (last.role === 'assistant') {
-            updated[updated.length - 1] = { ...last, content: last.content + chunk }
+            updated[updated.length - 1] = { ...last, content: display }
           }
           return updated
         })
@@ -218,7 +283,10 @@ export function PlayPage() {
           if (last.role === 'assistant') {
             updated[updated.length - 1] = {
               ...last,
-              content: last.content.replace(/```gamestate[\s\S]*?```/g, '').trim(),
+              content: last.content
+                .replace(/```gamestate[\s\S]*?```/g, '')
+                .replace(/```speech[\s\S]*?```/g, '')
+                .trim(),
             }
           }
           return updated
@@ -277,7 +345,19 @@ export function PlayPage() {
       },
       () => {
         setStreaming(false)
-        const cleanResponse = fullResponse.replace(/```gamestate[\s\S]*?```/g, '').trim()
+        flushSentenceBuffer()
+        const cleanResponse = fullResponse
+          .replace(/```gamestate[\s\S]*?```/g, '')
+          .replace(/```speech[\s\S]*?```/g, '')
+          .trim()
+        setMessages((prev) => {
+          const updated = [...prev]
+          const last = updated[updated.length - 1]
+          if (last?.role === 'assistant') {
+            updated[updated.length - 1] = { ...last, content: cleanResponse }
+          }
+          return updated
+        })
         saveMessage(session!.id, id, 'assistant', cleanResponse)
         inputRef.current?.focus()
       },
@@ -293,6 +373,7 @@ export function PlayPage() {
         setStreaming(false)
       },
       aiProvider,
+      ttsLanguage,
     )
   }
 
@@ -362,6 +443,34 @@ export function PlayPage() {
             <Bot className="h-3.5 w-3.5" />
             <span>{aiProvider === 'claude' ? 'Claude' : 'GPT-4o'}</span>
           </button>
+          <div className="h-4 w-px bg-navy" />
+          <button
+            onClick={() => useSpeechStore.getState().setEnabled(!speechEnabled)}
+            className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${
+              speechEnabled ? 'text-gold hover:bg-navy' : 'text-gray-600 hover:bg-navy hover:text-gray-400'
+            }`}
+            title={speechEnabled ? 'Stäng av röst' : 'Sätt på röst'}
+          >
+            {speechEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+          </button>
+          {speaking && (
+            <>
+              <button
+                onClick={speechPaused ? resumeSpeech : pauseSpeech}
+                className="rounded p-1 text-gold hover:bg-navy transition-colors"
+                title={speechPaused ? 'Fortsätt' : 'Pausa'}
+              >
+                {speechPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+              </button>
+              <button
+                onClick={stopSpeech}
+                className="rounded p-1 text-gold hover:bg-navy transition-colors"
+                title="Stoppa"
+              >
+                <Square className="h-3 w-3" />
+              </button>
+            </>
+          )}
           <div className="h-4 w-px bg-navy" />
           {currentSession && (
             <button
@@ -433,6 +542,7 @@ export function PlayPage() {
               )}
               {sidebarPanel === 'combat' && <CombatTracker />}
               {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
+              {sidebarPanel === 'speech' && <SpeechSettingsPanel />}
             </div>
           </div>
         )}
@@ -465,7 +575,18 @@ export function PlayPage() {
                       }`}
                     >
                       {msg.role === 'assistant' && (
-                        <div className="mb-1 text-xs font-medium text-gold">Dungeon Master</div>
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-xs font-medium text-gold">Dungeon Master</span>
+                          {speechEnabled && msg.content && !(streaming && i === messages.length - 1) && (
+                            <button
+                              onClick={() => speakPlain(cleanForSpeech(msg.content))}
+                              className="rounded p-1 text-gray-600 hover:text-gold transition-colors"
+                              title="Läs upp igen"
+                            >
+                              <Volume2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       )}
                       {msg.role === 'assistant' ? (
                         <div>

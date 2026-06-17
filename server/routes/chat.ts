@@ -64,7 +64,7 @@ function streamOpenAI({ systemPrompt, messages, onText, onEnd, onError }: Stream
 
 chatRoutes.post('/', async (req: Request, res: Response) => {
   try {
-    const { message, campaign_id, session_id, history = [], provider: overrideProvider } = req.body
+    const { message, campaign_id, session_id, history = [], provider: overrideProvider, ttsLanguage } = req.body
 
     if (!message || !campaign_id) {
       res.status(400).json({ error: 'Missing message or campaign_id' })
@@ -108,7 +108,7 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
       }
     }
 
-    const systemPrompt = buildSystemPrompt(campaign, ragResults, memories, activeConditions)
+    const systemPrompt = buildSystemPrompt(campaign, ragResults, memories, activeConditions, ttsLanguage)
 
     const trimmedHistory = history.slice(-MAX_HISTORY_MESSAGES)
     const chatMessages = [
@@ -135,6 +135,10 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
         res.write(`data: ${JSON.stringify({ content: text })}\n\n`)
       },
       async onEnd() {
+        const speechSegments = parseSpeechSegments(fullResponse)
+        if (speechSegments) {
+          res.write(`data: ${JSON.stringify({ speechSegments })}\n\n`)
+        }
         const gameState = parseGameState(fullResponse)
         if (gameState) {
           res.write(`data: ${JSON.stringify({ gameState })}\n\n`)
@@ -230,6 +234,19 @@ interface GameState {
   deathSaveResult?: { roll: number }
   restType?: 'short' | 'long'
   hitDiceUsed?: number
+  speech?: Array<{ speaker: string; text: string }>
+}
+
+function parseSpeechSegments(text: string): Array<{ speaker: string; text: string }> | null {
+  const match = text.match(/```speech\s*\n([\s\S]*?)\n```/)
+  if (!match) return null
+  try {
+    const parsed = JSON.parse(match[1])
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    return null
+  } catch {
+    return null
+  }
 }
 
 function parseGameState(text: string): GameState | null {

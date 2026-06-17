@@ -97,6 +97,37 @@ Valid conditions: blinded, charmed, deafened, exhaustion, frightened, grappled, 
 When the player takes a rest: "restType": "short" or "restType": "long"
 For short rests, include how many hit dice to spend: "hitDiceUsed": 2
 
+# Speech Segments (Text-to-Speech)
+The app has a text-to-speech system with different voice profiles for different speakers. After your narrative, include a speech block that breaks your response into tagged segments for voice synthesis. Each segment has a speaker type and the text to read aloud.
+
+Available speaker types:
+- "narrator" — your descriptive prose, scene-setting, and narration (default)
+- "villain" — antagonists, dark creatures, evil NPCs (deep, slow voice)
+- "elder" — wise old characters, sages, mentors (low, deliberate voice)
+- "warrior" — fighters, guards, soldiers, brave NPCs (strong, steady voice)
+- "mystic" — mages, seers, mysterious entities (high, ethereal voice)
+- "merchant" — shopkeepers, traders, innkeepers (bright, quick voice)
+
+Wrap it exactly like this:
+
+\`\`\`speech
+[
+  { "speaker": "narrator", "text": "Du träder in i den mörka grottan. Vattendroppar ekar mot stenväggarna." },
+  { "speaker": "villain", "text": "Vem vågar störa min slummer?" }
+]
+\`\`\`
+
+Rules for the speech block:
+- Include it in EVERY response (not just combat/mechanical ones)
+- CRITICAL: The speech block must cover ALL narrative text from your response — every sentence, every paragraph, every piece of dialogue. Do not skip or omit any part of the narrative. If you wrote it above, it must appear in the speech block.
+- Break the narrative into logical segments — one per speaker change or scene beat
+- Strip markdown formatting from the text (no **, #, etc.)
+- Keep the text natural for spoken delivery — no dice notation, no brackets
+- NPC dialogue gets the speaker type matching their character
+- Your narration and descriptions use "narrator"
+- Omit mechanical details (dice rolls, AC, HP numbers) from speech text — those are visual-only
+- The speech block is separate from and in addition to the gamestate block
+
 # Structured Output
 After your narrative, you MUST include a JSON block to update game state whenever something mechanically relevant happens (combat, damage, healing, loot, conditions, location changes, etc.). Wrap it exactly like this:
 
@@ -141,13 +172,25 @@ You will receive the character's details in the CAMPAIGN CONTEXT block. Track th
 # Language
 Respond in the same language the player writes in. If they switch languages mid-conversation, follow their lead.`
 
+const LANGUAGE_SECTIONS: Record<string, string> = {
+  sv: `# Language
+Write ALL narrative text, NPC dialogue, and speech block text in Swedish (svenska). This applies regardless of what language the player writes in. Game mechanics (dice rolls, stats) can use English notation.`,
+  en: `# Language
+Write ALL narrative text, NPC dialogue, and speech block text in English. This applies regardless of what language the player writes in.`,
+}
+
 export function buildSystemPrompt(
   campaign: Campaign | null,
   ragContext: string,
   memories: string[],
   activeConditions?: string[],
+  ttsLanguage?: string,
 ): string {
-  const parts = [BASE_PROMPT]
+  let base = BASE_PROMPT
+  if (ttsLanguage && LANGUAGE_SECTIONS[ttsLanguage]) {
+    base = base.replace(/# Language\n.*$/, LANGUAGE_SECTIONS[ttsLanguage])
+  }
+  const parts = [base]
 
   if (campaign) {
     parts.push(`
