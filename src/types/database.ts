@@ -45,6 +45,10 @@ export interface Npc {
   disposition: 'friendly' | 'neutral' | 'hostile'
   is_alive: boolean
   notes: string | null
+  location: string | null
+  backstory: string | null
+  relationship: string | null
+  last_seen_session_id: string | null
   created_at: string
 }
 

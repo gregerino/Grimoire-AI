@@ -12,6 +12,7 @@ import {
   createSession,
   listSessions,
   updateSession,
+  summarizeSession,
   saveMessage,
   getMessages,
   getCharacterSheet,
@@ -35,6 +36,7 @@ import { Markdown } from '@/components/chat/Markdown'
 import { FateChartPanel } from '@/components/oracle/FateChartPanel'
 import { CharacterPanel } from '@/components/character/CharacterPanel'
 import { CombatTracker } from '@/components/combat/CombatTracker'
+import { SessionHistory } from '@/components/session/SessionHistory'
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
 interface Message {
@@ -68,7 +70,7 @@ export function PlayPage() {
   const [loadingSession, setLoadingSession] = useState(false)
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [aiProvider, setAiProvider] = useState<AiProvider>('claude')
-  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0)
+  const [summarizing, setSummarizing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -221,7 +223,6 @@ export function PlayPage() {
           }
           return updated
         })
-        setSidebarRefreshKey((k) => k + 1)
 
         const combat = useCombatStore.getState()
 
@@ -296,15 +297,14 @@ export function PlayPage() {
   }
 
   const endSession = async () => {
-    if (!currentSession) return
-    const firstUserMsg = messages.find((m) => m.role === 'user')
-    const title = firstUserMsg
-      ? firstUserMsg.content.slice(0, 60) + (firstUserMsg.content.length > 60 ? '...' : '')
-      : 'Untitled session'
-    await updateSession(currentSession.id, {
-      ended_at: new Date().toISOString(),
-      title,
-    })
+    if (!currentSession || !id) return
+    setSummarizing(true)
+    try {
+      await summarizeSession(currentSession.id, id, campaign?.character_name ?? undefined)
+    } catch {
+      await updateSession(currentSession.id, { ended_at: new Date().toISOString() })
+    }
+    setSummarizing(false)
     setCurrentSession(null)
     setMessages([])
     await fetchSessions()
@@ -366,9 +366,11 @@ export function PlayPage() {
           {currentSession && (
             <button
               onClick={endSession}
-              className="rounded px-2 py-1 text-xs text-gray-500 hover:bg-navy hover:text-parchment transition-colors"
+              disabled={summarizing}
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-navy hover:text-parchment disabled:opacity-50 transition-colors"
             >
-              End Session
+              {summarizing && <Loader2 className="h-3 w-3 animate-spin" />}
+              {summarizing ? 'Writing diary...' : 'End Session'}
             </button>
           )}
           <button
@@ -401,44 +403,16 @@ export function PlayPage() {
             {/* Sidebar content */}
             <div className="flex-1 overflow-y-auto p-4">
               {sidebarPanel === 'history' && (
-                <div>
-                  <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Past Sessions
-                  </h3>
-                  {sessions.length === 0 ? (
-                    <p className="text-xs text-gray-600">No sessions yet</p>
-                  ) : (
-                    <div className="space-y-1">
-                      {sessions.map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => loadSession(s)}
-                          className={`w-full rounded-lg px-3 py-2 text-left transition-colors ${
-                            currentSession?.id === s.id
-                              ? 'bg-navy text-parchment'
-                              : 'text-gray-400 hover:bg-navy/50 hover:text-gray-300'
-                          }`}
-                        >
-                          <div className="truncate text-sm">
-                            {s.title || 'Untitled session'}
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            {new Date(s.started_at).toLocaleDateString()}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <SessionHistory sessions={sessions} onLoadSession={loadSession} />
               )}
               {sidebarPanel === 'gamestate' && campaign && (
-                <GameStatePanel campaign={campaign} refreshKey={sidebarRefreshKey} />
+                <GameStatePanel campaign={campaign} />
               )}
-              {sidebarPanel === 'npcs' && <NpcTab campaignId={id} refreshKey={sidebarRefreshKey} />}
-              {sidebarPanel === 'quests' && <QuestTab campaignId={id} refreshKey={sidebarRefreshKey} />}
-              {sidebarPanel === 'inventory' && <InventoryTab campaignId={id} refreshKey={sidebarRefreshKey} />}
+              {sidebarPanel === 'npcs' && <NpcTab campaignId={id} />}
+              {sidebarPanel === 'quests' && <QuestTab campaignId={id} />}
+              {sidebarPanel === 'inventory' && <InventoryTab campaignId={id} />}
               {sidebarPanel === 'character' && (
-                <CharacterPanel campaignId={id} refreshKey={sidebarRefreshKey} />
+                <CharacterPanel campaignId={id} />
               )}
               {sidebarPanel === 'oracle' && campaign && (
                 <FateChartPanel

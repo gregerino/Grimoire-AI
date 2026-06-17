@@ -5,6 +5,7 @@ import {
   Moon, AlertCircle,
 } from 'lucide-react'
 import { getCharacterSheet, parseCharacterPdf, saveCharacterSheet } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import { ConditionBadge } from '@/components/combat/ConditionBadge'
 import { RestDialog } from '@/components/combat/RestDialog'
 import type { Condition } from '@/types/combat'
@@ -34,7 +35,6 @@ interface CharacterSheet {
 
 interface Props {
   campaignId: string
-  refreshKey: number
 }
 
 const STAT_NAMES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] as const
@@ -44,7 +44,7 @@ function mod(score: number): string {
   return m >= 0 ? `+${m}` : `${m}`
 }
 
-export function CharacterPanel({ campaignId, refreshKey }: Props) {
+export function CharacterPanel({ campaignId }: Props) {
   const [character, setCharacter] = useState<CharacterSheet | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -65,7 +65,22 @@ export function CharacterPanel({ campaignId, refreshKey }: Props) {
 
   useEffect(() => {
     fetchCharacter()
-  }, [fetchCharacter, refreshKey])
+
+    const channel = supabase
+      .channel(`charsheet:${campaignId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'character_sheets', filter: `campaign_id=eq.${campaignId}` },
+        () => {
+          fetchCharacter()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [fetchCharacter, campaignId])
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

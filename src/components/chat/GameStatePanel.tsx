@@ -12,10 +12,9 @@ interface Memory {
 
 interface Props {
   campaign: Campaign
-  refreshKey: number
 }
 
-export function GameStatePanel({ campaign, refreshKey }: Props) {
+export function GameStatePanel({ campaign }: Props) {
   const [memories, setMemories] = useState<Memory[]>([])
   const [showAllMemories, setShowAllMemories] = useState(false)
   const [liveCampaign, setLiveCampaign] = useState(campaign)
@@ -42,7 +41,34 @@ export function GameStatePanel({ campaign, refreshKey }: Props) {
 
   useEffect(() => {
     fetchLiveData()
-  }, [fetchLiveData, refreshKey])
+
+    const campaignChannel = supabase
+      .channel(`campaign:${campaign.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'campaigns', filter: `id=eq.${campaign.id}` },
+        (payload) => {
+          setLiveCampaign((prev) => ({ ...prev, ...payload.new }))
+        },
+      )
+      .subscribe()
+
+    const memoriesChannel = supabase
+      .channel(`memories:${campaign.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'campaign_memories', filter: `campaign_id=eq.${campaign.id}` },
+        (payload) => {
+          setMemories((prev) => [payload.new as Memory, ...prev].slice(0, 20))
+        },
+      )
+      .subscribe()
+
+    return () => {
+      campaignChannel.unsubscribe()
+      memoriesChannel.unsubscribe()
+    }
+  }, [fetchLiveData, campaign.id])
 
   const hp = liveCampaign.current_hp
   const maxHp = liveCampaign.max_hp

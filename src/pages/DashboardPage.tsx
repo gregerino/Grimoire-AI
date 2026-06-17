@@ -4,19 +4,25 @@ import { Plus, ScrollText } from 'lucide-react'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { CampaignCard } from '@/components/campaign/CampaignCard'
 import { CreateCampaignModal } from '@/components/campaign/CreateCampaignModal'
+import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import type { Campaign } from '@/types/database'
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const { campaigns, loading, fetchCampaigns, deleteCampaign } = useCampaignStore()
   const [showCreate, setShowCreate] = useState(false)
+  const [editTarget, setEditTarget] = useState<Campaign | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCampaigns()
   }, [fetchCampaigns])
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Abandon this campaign forever?')) {
-      await deleteCampaign(id)
+  const handleDelete = async () => {
+    if (deleteTarget) {
+      await deleteCampaign(deleteTarget)
+      setDeleteTarget(null)
     }
   }
 
@@ -59,7 +65,8 @@ export function DashboardPage() {
             <CampaignCard
               key={campaign.id}
               campaign={campaign}
-              onDelete={handleDelete}
+              onEdit={setEditTarget}
+              onDelete={setDeleteTarget}
             />
           ))}
         </div>
@@ -69,6 +76,24 @@ export function DashboardPage() {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onCreated={(id) => navigate(`/campaign/${id}`)}
+      />
+
+      {editTarget && (
+        <EditCampaignModal
+          open={!!editTarget}
+          campaign={editTarget}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Abandon Campaign"
+        message="This campaign and all its data (sessions, NPCs, quests, inventory) will be permanently lost. This cannot be undone."
+        confirmLabel="Abandon Forever"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   )

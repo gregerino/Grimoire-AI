@@ -2,11 +2,14 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { Campaign } from '@/types/database'
 
+type CampaignEditable = Partial<Pick<Campaign, 'name' | 'description' | 'setting' | 'character_name' | 'character_class' | 'status'>>
+
 interface CampaignState {
   campaigns: Campaign[]
   loading: boolean
   fetchCampaigns: () => Promise<void>
   createCampaign: (campaign: Pick<Campaign, 'name' | 'description' | 'setting' | 'character_name' | 'character_class'>) => Promise<Campaign | null>
+  updateCampaign: (id: string, updates: CampaignEditable) => Promise<Campaign | null>
   deleteCampaign: (id: string) => Promise<void>
 }
 
@@ -41,6 +44,22 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
     if (!error && data) {
       const typed = data as Campaign
       set({ campaigns: [typed, ...get().campaigns] })
+      return typed
+    }
+    return null
+  },
+
+  updateCampaign: async (id, updates) => {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (!error && data) {
+      const typed = data as Campaign
+      set({ campaigns: get().campaigns.map((c) => (c.id === id ? typed : c)) })
       return typed
     }
     return null

@@ -32,6 +32,13 @@ export function updateSession(sessionId: string, updates: Record<string, unknown
   })
 }
 
+export function summarizeSession(sessionId: string, campaignId: string, characterName?: string) {
+  return jsonFetch(`${API_BASE}/session/${sessionId}/summarize`, {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId, character_name: characterName }),
+  })
+}
+
 export function saveMessage(sessionId: string, campaignId: string, role: string, content: string) {
   return jsonFetch(`${API_BASE}/session/${sessionId}/message`, {
     method: 'POST',
@@ -190,6 +197,15 @@ export function performRest(
   return jsonFetch(`${API_BASE}/character/${campaignId}/rest`, {
     method: 'PATCH',
     body: JSON.stringify({ type, hitDiceUsed }),
+  })
+}
+
+// --- NPC ---
+
+export function aiUpdateNpc(npcId: string, context: string) {
+  return jsonFetch(`${API_BASE}/npc/${npcId}/ai-update`, {
+    method: 'POST',
+    body: JSON.stringify({ context }),
   })
 }
 

@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express'
+import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '../lib/supabase-admin'
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export const sessionRoutes = Router()
 
@@ -104,4 +107,61 @@ sessionRoutes.get('/:id/messages', async (req: Request, res: Response) => {
   }
 
   res.json({ messages: data })
+})
+
+// POST /api/session/:id/summarize — generate a diary-style summary
+sessionRoutes.post('/:id/summarize', async (req: Request, res: Response) => {
+  const { id } = req.params
+  const { campaign_id, character_name } = req.body
+
+  const { data: msgs } = await supabaseAdmin
+    .from('messages')
+    .select('role, content')
+    .eq('session_id', id)
+    .order('created_at', { ascending: true })
+
+  if (!msgs || msgs.length === 0) {
+    res.json({ summary: null })
+    return
+  }
+
+  const transcript = msgs
+    .map((m: { role: string; content: string }) => `${m.role === 'user' ? 'PLAYER' : 'DM'}: ${m.content}`)
+    .join('\n\n')
+
+  const result = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6-20250514',
+    max_tokens: 1024,
+    messages: [
+      {
+        role: 'user',
+        content: `You are a chronicler writing a journal entry for a D&D adventurer${character_name ? ` named ${character_name}` : ''}. Based on the session transcript below, write a first-person diary entry (2-4 paragraphs) that captures the key events, encounters, discoveries, and emotional moments. Write in an evocative, atmospheric style — as if the character is reflecting on the day's events by candlelight. Include specific details from the session.
+
+SESSION TRANSCRIPT:
+${transcript}
+
+Write the diary entry now. Do not include a date header or "Dear Diary" — start directly with the narrative.`,
+      },
+    ],
+  })
+
+  const summary = result.content[0].type === 'text' ? result.content[0].text : ''
+
+  const firstUserMsg = msgs.find((m: { role: string }) => m.role === 'user')
+  const title = firstUserMsg
+    ? (firstUserMsg as { content: string }).content.slice(0, 60)
+    : 'Untitled session'
+
+  await supabaseAdmin
+    .from('sessions')
+    .update({ summary, title, ended_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (campaign_id) {
+    await supabaseAdmin
+      .from('campaign_memories')
+      .insert({ campaign_id, session_id: id, content: `Session summary: ${summary.slice(0, 500)}` })
+  }
+
+  res.json({ summary, title })
 })

@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText } from 'lucide-react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useCampaignStore } from '@/stores/campaignStore'
 import { supabase } from '@/lib/supabase'
 import { OverviewTab } from '@/components/campaign/tabs/OverviewTab'
 import { NpcTab } from '@/components/campaign/tabs/NpcTab'
 import { QuestTab } from '@/components/campaign/tabs/QuestTab'
 import { InventoryTab } from '@/components/campaign/tabs/InventoryTab'
 import { PdfLibrary } from '@/components/pdf/PdfLibrary'
+import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { Campaign } from '@/types/database'
 
 type Tab = 'overview' | 'npcs' | 'quests' | 'inventory' | 'library'
@@ -22,10 +25,14 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 export function CampaignPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
+  const { deleteCampaign } = useCampaignStore()
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [loading, setLoading] = useState(true)
+  const [showEdit, setShowEdit] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -40,9 +47,21 @@ export function CampaignPage() {
       })
   }, [id])
 
+  const handleDelete = async () => {
+    if (!id) return
+    await deleteCampaign(id)
+    navigate('/dashboard')
+  }
+
   if (!id || !user) return null
   if (loading) return <div className="flex h-64 items-center justify-center text-gray-500">Loading...</div>
   if (!campaign) return <div className="flex h-64 items-center justify-center text-gray-500">Campaign not found</div>
+
+  const statusColors = {
+    active: 'text-green-400 bg-green-400/10',
+    paused: 'text-yellow-400 bg-yellow-400/10',
+    completed: 'text-gray-400 bg-gray-400/10',
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -57,20 +76,41 @@ export function CampaignPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-parchment">{campaign.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-parchment">{campaign.name}</h1>
+            <span className={`rounded-full px-2 py-0.5 text-xs ${statusColors[campaign.status]}`}>
+              {campaign.status}
+            </span>
+          </div>
           {campaign.character_name && (
             <p className="mt-1 text-sm text-gray-500">
               {campaign.character_name} · Level {campaign.character_level} {campaign.character_class}
             </p>
           )}
         </div>
-        <Link
-          to={`/campaign/${id}/play`}
-          className="inline-flex items-center gap-2 rounded-lg bg-gold px-6 py-3 text-sm font-medium text-dark-navy hover:bg-gold-light transition-colors"
-        >
-          <Play className="h-4 w-4" />
-          Enter Session
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowEdit(true)}
+            className="rounded-lg p-2 text-gray-500 hover:bg-navy hover:text-gold transition-colors"
+            title="Edit campaign"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setShowDelete(true)}
+            className="rounded-lg p-2 text-gray-500 hover:bg-blood/20 hover:text-red-400 transition-colors"
+            title="Delete campaign"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          <Link
+            to={`/campaign/${id}/play`}
+            className="inline-flex items-center gap-2 rounded-lg bg-gold px-6 py-3 text-sm font-medium text-dark-navy hover:bg-gold-light transition-colors"
+          >
+            <Play className="h-4 w-4" />
+            Enter Session
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -99,6 +139,23 @@ export function CampaignPage() {
         {activeTab === 'inventory' && <InventoryTab campaignId={id} />}
         {activeTab === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
       </div>
+
+      <EditCampaignModal
+        open={showEdit}
+        campaign={campaign}
+        onClose={() => setShowEdit(false)}
+        onUpdated={setCampaign}
+      />
+
+      <ConfirmDialog
+        open={showDelete}
+        title="Abandon Campaign"
+        message="This campaign and all its data (sessions, NPCs, quests, inventory) will be permanently lost. This cannot be undone."
+        confirmLabel="Abandon Forever"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setShowDelete(false)}
+      />
     </div>
   )
 }

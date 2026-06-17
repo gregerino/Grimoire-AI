@@ -7,6 +7,7 @@ import { chatRoutes } from './routes/chat'
 import { sessionRoutes } from './routes/session'
 import { characterRoutes } from './routes/character'
 import { oracleRoutes } from './routes/oracle'
+import { npcRoutes } from './routes/npc'
 
 dotenv.config()
 
@@ -22,6 +23,7 @@ app.use('/api/chat', chatRoutes)
 app.use('/api/session', sessionRoutes)
 app.use('/api/character', characterRoutes)
 app.use('/api/oracle', oracleRoutes)
+app.use('/api/npc', npcRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' })

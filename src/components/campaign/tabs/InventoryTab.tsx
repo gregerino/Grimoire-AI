@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, Trash2, X, Shield, Minus, Search, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Plus, Trash2, X, Minus, Search, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useRealtimeTable } from '@/hooks/useRealtimeTable'
 import type { InventoryItem } from '@/types/database'
 
 interface Props {
   campaignId: string
-  refreshKey?: number
 }
 
 const categoryIcons: Record<string, string> = {
@@ -22,25 +22,12 @@ const categoryOrder = ['weapon', 'armor', 'potion', 'scroll', 'gear', 'treasure'
 
 const MAX_ATTUNEMENT = 3
 
-export function InventoryTab({ campaignId, refreshKey }: Props) {
-  const [items, setItems] = useState<InventoryItem[]>([])
-  const [loading, setLoading] = useState(true)
+export function InventoryTab({ campaignId }: Props) {
+  const { rows: items, loading } = useRealtimeTable<InventoryItem>({ table: 'inventory_items', campaignId })
   const [showForm, setShowForm] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
   const [form, setForm] = useState({ name: '', description: '', category: 'gear' as InventoryItem['category'], quantity: 1 })
-
-  const fetchItems = useCallback(async () => {
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .eq('campaign_id', campaignId)
-      .order('created_at', { ascending: false })
-    if (data) setItems(data as InventoryItem[])
-    setLoading(false)
-  }, [campaignId])
-
-  useEffect(() => { fetchItems() }, [fetchItems, refreshKey])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,12 +35,10 @@ export function InventoryTab({ campaignId, refreshKey }: Props) {
     await supabase.from('inventory_items').insert({ ...form, campaign_id: campaignId })
     setForm({ name: '', description: '', category: 'gear', quantity: 1 })
     setShowForm(false)
-    fetchItems()
   }
 
   const toggleEquipped = async (item: InventoryItem) => {
     await supabase.from('inventory_items').update({ is_equipped: !item.is_equipped }).eq('id', item.id)
-    fetchItems()
   }
 
   const adjustQuantity = async (item: InventoryItem, delta: number) => {
@@ -63,12 +48,10 @@ export function InventoryTab({ campaignId, refreshKey }: Props) {
     } else {
       await supabase.from('inventory_items').update({ quantity: newQty }).eq('id', item.id)
     }
-    fetchItems()
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('inventory_items').delete().eq('id', id)
-    setItems((prev) => prev.filter((i) => i.id !== id))
   }
 
   const toggleCategory = (cat: string) => {

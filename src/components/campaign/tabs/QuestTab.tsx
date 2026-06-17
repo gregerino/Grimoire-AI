@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { Plus, Trash2, X, CheckCircle, Circle, XCircle, AlertTriangle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useRealtimeTable } from '@/hooks/useRealtimeTable'
 import type { Quest } from '@/types/database'
 
 interface Props {
   campaignId: string
-  refreshKey?: number
 }
 
 const statusIcons = {
@@ -28,23 +28,10 @@ const priorityBadge = {
   personal: 'bg-purple-400/20 text-purple-400',
 }
 
-export function QuestTab({ campaignId, refreshKey }: Props) {
-  const [quests, setQuests] = useState<Quest[]>([])
-  const [loading, setLoading] = useState(true)
+export function QuestTab({ campaignId }: Props) {
+  const { rows: quests, loading } = useRealtimeTable<Quest>({ table: 'quests', campaignId })
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', priority: 'side' as Quest['priority'] })
-
-  const fetchQuests = useCallback(async () => {
-    const { data } = await supabase
-      .from('quests')
-      .select('*')
-      .eq('campaign_id', campaignId)
-      .order('created_at', { ascending: false })
-    if (data) setQuests(data as Quest[])
-    setLoading(false)
-  }, [campaignId])
-
-  useEffect(() => { fetchQuests() }, [fetchQuests, refreshKey])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,19 +39,16 @@ export function QuestTab({ campaignId, refreshKey }: Props) {
     await supabase.from('quests').insert({ ...form, campaign_id: campaignId })
     setForm({ title: '', description: '', priority: 'side' })
     setShowForm(false)
-    fetchQuests()
   }
 
   const cycleStatus = async (quest: Quest) => {
     const order: Quest['status'][] = ['active', 'completed', 'failed', 'abandoned']
     const next = order[(order.indexOf(quest.status) + 1) % order.length]
     await supabase.from('quests').update({ status: next }).eq('id', quest.id)
-    fetchQuests()
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('quests').delete().eq('id', id)
-    setQuests((prev) => prev.filter((q) => q.id !== id))
   }
 
   const inputClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/40 transition-colors'

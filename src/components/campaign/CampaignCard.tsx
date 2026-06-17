@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom'
-import { Sword, Clock, Trash2 } from 'lucide-react'
+import { Sword, Clock, Trash2, Pencil } from 'lucide-react'
 import type { Campaign } from '@/types/database'
 
 interface Props {
   campaign: Campaign
+  onEdit: (campaign: Campaign) => void
   onDelete: (id: string) => void
 }
 
-export function CampaignCard({ campaign, onDelete }: Props) {
+export function CampaignCard({ campaign, onEdit, onDelete }: Props) {
   const statusColors = {
     active: 'text-green-400 bg-green-400/10',
     paused: 'text-yellow-400 bg-yellow-400/10',
@@ -47,6 +48,16 @@ export function CampaignCard({ campaign, onDelete }: Props) {
             <Clock className="h-3 w-3" />
             {new Date(campaign.updated_at).toLocaleDateString()}
           </div>
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              onEdit(campaign)
+            }}
+            className="relative z-10 rounded p-1 text-gray-600 opacity-0 hover:bg-navy hover:text-gold group-hover:opacity-100 transition-all"
+            title="Edit campaign"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
           <button
             onClick={(e) => {
               e.preventDefault()
