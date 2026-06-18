@@ -46,10 +46,13 @@ export function useAudio() {
   const musicKeyRef = useRef<MusicMood | null>(null)
   const sfxCacheRef = useRef<Map<string, Howl>>(new Map())
 
+  const resumedRef = useRef(false)
+
   const store = useAudioStore()
   const {
     masterVolume, ambientVolume, musicVolume, sfxVolume,
     ambientMuted, musicMuted, sfxMuted,
+    currentAmbient: storedAmbient, currentMusic: storedMusic,
     unlocked, setUnlocked,
     setCurrentAmbient, setCurrentMusic,
   } = store
@@ -129,7 +132,7 @@ export function useAudio() {
     howl.play()
   }, [effectiveSfx, tryUnlock])
 
-  const stopAll = useCallback(() => {
+  const stopAll = useCallback((clearStored = false) => {
     if (ambientRef.current) {
       ambientRef.current.stop()
       ambientRef.current.unload()
@@ -142,9 +145,24 @@ export function useAudio() {
     }
     ambientKeyRef.current = null
     musicKeyRef.current = null
-    setCurrentAmbient(null)
-    setCurrentMusic(null)
+    if (clearStored) {
+      setCurrentAmbient(null)
+      setCurrentMusic(null)
+    }
   }, [setCurrentAmbient, setCurrentMusic])
+
+  useEffect(() => {
+    if (!unlocked || resumedRef.current) return
+    resumedRef.current = true
+    if (storedAmbient && !ambientRef.current && !ambientMuted) {
+      ambientKeyRef.current = storedAmbient
+      crossfade(ambientRef, AMBIENT_PATHS[storedAmbient], effectiveAmbient)
+    }
+    if (storedMusic && !musicRef.current && !musicMuted) {
+      musicKeyRef.current = storedMusic
+      crossfade(musicRef, MUSIC_PATHS[storedMusic], effectiveMusic)
+    }
+  }, [unlocked, storedAmbient, storedMusic, ambientMuted, musicMuted, crossfade, effectiveAmbient, effectiveMusic])
 
   useEffect(() => {
     return () => {

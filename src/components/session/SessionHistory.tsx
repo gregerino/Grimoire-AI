@@ -1,12 +1,13 @@
-import { BookOpen, Clock } from 'lucide-react'
+import { BookOpen, Clock, Eye } from 'lucide-react'
 import type { Session } from '@/types/database'
 
 interface Props {
   sessions: Session[]
   onLoadSession: (session: Session) => void
+  onReadSession?: (session: Session) => void
 }
 
-export function SessionHistory({ sessions, onLoadSession }: Props) {
+export function SessionHistory({ sessions, onLoadSession, onReadSession }: Props) {
   const endedSessions = sessions.filter((s) => s.ended_at)
 
   if (endedSessions.length === 0) {
@@ -48,12 +49,23 @@ export function SessionHistory({ sessions, onLoadSession }: Props) {
             <p className="text-xs text-gray-600 italic">No diary entry for this session.</p>
           )}
 
-          <button
-            onClick={() => onLoadSession(session)}
-            className="mt-2 text-[10px] font-medium text-gold/60 hover:text-gold transition-colors"
-          >
-            Load transcript
-          </button>
+          <div className="mt-2 flex items-center gap-3">
+            {onReadSession && (
+              <button
+                onClick={() => onReadSession(session)}
+                className="flex items-center gap-1 text-[10px] font-medium text-gold/60 hover:text-gold transition-colors"
+              >
+                <Eye className="h-3 w-3" />
+                Read
+              </button>
+            )}
+            <button
+              onClick={() => onLoadSession(session)}
+              className="text-[10px] font-medium text-gray-600 hover:text-gray-400 transition-colors"
+            >
+              Load into chat
+            </button>
+          </div>
         </div>
       ))}
     </div>

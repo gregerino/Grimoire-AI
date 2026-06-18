@@ -66,6 +66,8 @@ export const useAudioStore = create<AudioState>()(
         ambientMuted: s.ambientMuted,
         musicMuted: s.musicMuted,
         sfxMuted: s.sfxMuted,
+        currentAmbient: s.currentAmbient,
+        currentMusic: s.currentMusic,
       }),
     },
   ),

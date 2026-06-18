@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2 } from 'lucide-react'
+import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { supabase } from '@/lib/supabase'
@@ -11,12 +11,16 @@ import { InventoryTab } from '@/components/campaign/tabs/InventoryTab'
 import { PdfLibrary } from '@/components/pdf/PdfLibrary'
 import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import type { Campaign } from '@/types/database'
+import { SessionHistory } from '@/components/session/SessionHistory'
+import { SessionReader } from '@/components/session/SessionReader'
+import { listSessions } from '@/lib/api'
+import type { Campaign, Session } from '@/types/database'
 
-type Tab = 'overview' | 'npcs' | 'quests' | 'inventory' | 'library'
+type Tab = 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'sessions'
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'overview', label: 'Overview', icon: <User className="h-4 w-4" /> },
+  { id: 'sessions', label: 'Sessions', icon: <BookOpen className="h-4 w-4" /> },
   { id: 'npcs', label: 'NPCs', icon: <Swords className="h-4 w-4" /> },
   { id: 'quests', label: 'Quests', icon: <ScrollText className="h-4 w-4" /> },
   { id: 'inventory', label: 'Inventory', icon: <Package className="h-4 w-4" /> },
@@ -33,6 +37,18 @@ export function CampaignPage() {
   const [loading, setLoading] = useState(true)
   const [showEdit, setShowEdit] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [readingSession, setReadingSession] = useState<Session | null>(null)
+
+  const fetchSessions = useCallback(async () => {
+    if (!id) return
+    const { sessions: data } = await listSessions(id)
+    setSessions(data)
+  }, [id])
+
+  useEffect(() => {
+    fetchSessions()
+  }, [fetchSessions])
 
   useEffect(() => {
     if (!id) return
@@ -137,8 +153,26 @@ export function CampaignPage() {
         {activeTab === 'npcs' && <NpcTab campaignId={id} />}
         {activeTab === 'quests' && <QuestTab campaignId={id} />}
         {activeTab === 'inventory' && <InventoryTab campaignId={id} />}
+        {activeTab === 'sessions' && (
+          <SessionHistory
+            sessions={sessions}
+            onLoadSession={() => navigate(`/campaign/${id}/play`)}
+            onReadSession={(s) => setReadingSession(s)}
+          />
+        )}
         {activeTab === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
       </div>
+
+      {readingSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="relative h-[85vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-navy bg-dark-navy">
+            <SessionReader
+              session={readingSession}
+              onClose={() => setReadingSession(null)}
+            />
+          </div>
+        </div>
+      )}
 
       <EditCampaignModal
         open={showEdit}

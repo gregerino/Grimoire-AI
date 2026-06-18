@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useBlocker } from 'react-router-dom'
 import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
@@ -31,6 +31,7 @@ import { Markdown } from '@/components/chat/Markdown'
 import { CharacterPanel } from '@/components/character/CharacterPanel'
 import { CombatTracker } from '@/components/combat/CombatTracker'
 import { SessionHistory } from '@/components/session/SessionHistory'
+import { SessionReader } from '@/components/session/SessionReader'
 import { SpeechSettingsPanel } from '@/components/settings/SpeechSettingsPanel'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useSpeechStore } from '@/stores/speechStore'
@@ -85,8 +86,60 @@ export function PlayPage() {
   const sentenceBufferRef = useRef('')
   const ttsDisplayLengthRef = useRef(0)
   const [micListening, setMicListening] = useState(false)
+  const [readingSession, setReadingSession] = useState<Session | null>(null)
   const sttLang: SttLanguage = ttsLanguage === 'sv' ? 'sv-SE' : 'en-US'
   const { playAmbient, playMusic, playSfx, stopAll: stopAudio, tryUnlock: unlockAudio } = useAudio()
+  const autoSavingRef = useRef(false)
+
+  const autoSaveSession = useCallback(async () => {
+    if (autoSavingRef.current || !currentSession || !id || messages.length === 0) return
+    autoSavingRef.current = true
+    try {
+      await summarizeSession(currentSession.id, id, campaign?.character_name ?? undefined)
+    } catch {
+      await updateSession(currentSession.id, { ended_at: new Date().toISOString() })
+    }
+  }, [currentSession, id, messages.length, campaign?.character_name])
+
+  // Auto-save on browser close / tab close
+  useEffect(() => {
+    const handler = () => {
+      if (!currentSession || !id || messages.length === 0) return
+      const body = JSON.stringify({
+        campaign_id: id,
+        character_name: campaign?.character_name ?? undefined,
+      })
+      navigator.sendBeacon(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/session/${currentSession.id}/summarize`,
+        new Blob([body], { type: 'application/json' }),
+      )
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [currentSession, id, messages.length, campaign?.character_name])
+
+  // Auto-save on component unmount (back button within SPA)
+  const autoSaveRef = useRef(autoSaveSession)
+  autoSaveRef.current = autoSaveSession
+  useEffect(() => {
+    return () => { autoSaveRef.current() }
+  }, [])
+
+  // Block React Router navigation to save first
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      currentLocation.pathname !== nextLocation.pathname &&
+      !!currentSession &&
+      messages.length > 0 &&
+      !autoSavingRef.current,
+  )
+
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    autoSaveSession().finally(() => {
+      blocker.proceed()
+    })
+  }, [blocker, autoSaveSession])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -368,6 +421,7 @@ export function PlayPage() {
 
   const endSession = async () => {
     if (!currentSession || !id) return
+    autoSavingRef.current = true
     setSummarizing(true)
     try {
       await summarizeSession(currentSession.id, id, campaign?.character_name ?? undefined)
@@ -379,6 +433,7 @@ export function PlayPage() {
     setMessages([])
     stopAudio()
     await fetchSessions()
+    autoSavingRef.current = false
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -541,7 +596,11 @@ export function PlayPage() {
             {/* Sidebar content */}
             <div className="flex-1 overflow-y-auto p-4">
               {sidebarPanel === 'history' && (
-                <SessionHistory sessions={sessions} onLoadSession={loadSession} />
+                <SessionHistory
+                  sessions={sessions}
+                  onLoadSession={loadSession}
+                  onReadSession={(s) => setReadingSession(s)}
+                />
               )}
               {sidebarPanel === 'gamestate' && campaign && (
                 <GameStatePanel campaign={campaign} />
@@ -561,7 +620,15 @@ export function PlayPage() {
         )}
 
         {/* Chat area */}
-        <div className="flex flex-1 flex-col">
+        <div className="relative flex flex-1 flex-col">
+          {readingSession && (
+            <SessionReader
+              session={readingSession}
+              onClose={() => setReadingSession(null)}
+              onSpeak={(text) => { stopSpeech(); speakPlain(text) }}
+              speechEnabled={speechEnabled}
+            />
+          )}
           <div className="flex-1 overflow-y-auto px-4 py-6">
             {loadingSession ? (
               <div className="flex h-full items-center justify-center">
