@@ -8,8 +8,9 @@ interface SpeechSegment {
 }
 
 interface QueueItem {
-  audioPromise: Promise<Blob>
   text: string
+  speaker: VoiceProfileKey
+  voiceId: string | null
 }
 
 export function useSpeech() {
@@ -45,7 +46,7 @@ export function useSpeech() {
     setPaused(false)
 
     try {
-      const blob = await item.audioPromise
+      const blob = await fetchTtsAudio(item.text, item.speaker, item.voiceId)
       if (stoppedRef.current) {
         activeRef.current = false
         return
@@ -66,7 +67,8 @@ export function useSpeech() {
       cleanup()
       activeRef.current = false
       processQueue()
-    } catch {
+    } catch (err) {
+      console.warn('TTS fetch failed for chunk, skipping:', (err as Error).message)
       cleanup()
       activeRef.current = false
       processQueue()
@@ -78,8 +80,7 @@ export function useSpeech() {
       const { enabled, defaultVoiceId } = useSpeechStore.getState()
       if (!enabled || !text.trim()) return
       const voiceId = speaker === 'narrator' ? defaultVoiceId : null
-      const audioPromise = fetchTtsAudio(text, speaker, voiceId)
-      queueRef.current.push({ audioPromise, text })
+      queueRef.current.push({ text, speaker, voiceId })
       if (!activeRef.current) processQueue()
     },
     [processQueue],
@@ -115,6 +116,10 @@ export function useSpeech() {
     [enqueue],
   )
 
+  const resetStopped = useCallback(() => {
+    stoppedRef.current = false
+  }, [])
+
   const stop = useCallback(() => {
     stoppedRef.current = true
     cleanup()
@@ -134,5 +139,5 @@ export function useSpeech() {
     setPaused(false)
   }, [])
 
-  return { speak, speakPlain, enqueueSentence, stop, pause, resume, speaking, paused, supported: true }
+  return { speak, speakPlain, enqueueSentence, stop, pause, resume, resetStopped, speaking, paused, supported: true }
 }

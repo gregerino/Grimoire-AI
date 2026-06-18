@@ -83,12 +83,11 @@ export function PlayPage() {
   const [summarizing, setSummarizing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const { speakPlain, enqueueSentence, stop: stopSpeech, pause: pauseSpeech, resume: resumeSpeech, speaking, paused: speechPaused } = useSpeech()
+  const { speakPlain, enqueueSentence, stop: stopSpeech, pause: pauseSpeech, resume: resumeSpeech, resetStopped, speaking, paused: speechPaused } = useSpeech()
+  const ttsBufferRef = useRef('')
   const speechEnabled = useSpeechStore((s) => s.enabled)
   const autoRead = useSpeechStore((s) => s.autoRead)
   const ttsLanguage = useSpeechStore((s) => s.ttsLanguage)
-  const sentenceBufferRef = useRef('')
-  const ttsDisplayLengthRef = useRef(0)
   const [micListening, setMicListening] = useState(false)
   const [readingSession, setReadingSession] = useState<Session | null>(null)
   const [showMap, setShowMap] = useState(false)
@@ -178,27 +177,23 @@ export function PlayPage() {
       .replace(/^>?\s*\d+\s*[—–-]\s*(Exceptional\s+)?(Yes|No|Extreme\s+Yes|Extreme\s+No)\.?.*$/gim, '')
       .trim()
 
-  const flushSentenceBuffer = useCallback(() => {
-    const text = cleanForSpeech(sentenceBufferRef.current)
-    sentenceBufferRef.current = ''
+  const flushTtsBuffer = useCallback(() => {
+    const text = cleanForSpeech(ttsBufferRef.current)
+    ttsBufferRef.current = ''
     if (text) enqueueSentence(text)
   }, [enqueueSentence])
 
   const handleStreamChunkForTts = useCallback(
     (chunk: string) => {
       if (!speechEnabled || !autoRead) return
-      sentenceBufferRef.current += chunk
-      while (true) {
-        const buf = sentenceBufferRef.current
-        const match = buf.match(/[.!?…][“'””'']*\s/)
-        if (!match || match.index === undefined) break
-        const matchEnd = match.index + match[0].length
-        const sentence = buf.slice(0, matchEnd - 1)
-        sentenceBufferRef.current = buf.slice(matchEnd)
-        const cleaned = cleanForSpeech(sentence)
-        if (cleaned) {
-          enqueueSentence(cleaned)
+      ttsBufferRef.current += chunk
+      const parts = ttsBufferRef.current.split(/\n\n+/)
+      if (parts.length > 1) {
+        for (let i = 0; i < parts.length - 1; i++) {
+          const cleaned = cleanForSpeech(parts[i])
+          if (cleaned) enqueueSentence(cleaned)
         }
+        ttsBufferRef.current = parts[parts.length - 1]
       }
     },
     [speechEnabled, autoRead, enqueueSentence],
@@ -250,9 +245,9 @@ export function PlayPage() {
 
     if (!opts?.text) setInput('')
     setStreaming(true)
-    sentenceBufferRef.current = ''
-    ttsDisplayLengthRef.current = 0
+    ttsBufferRef.current = ''
     if (speaking) stopSpeech()
+    if (!mute) resetStopped()
 
     const userMessage: Message = { role: 'user', content: display }
     setMessages((prev) => [...prev, userMessage])
@@ -263,6 +258,7 @@ export function PlayPage() {
 
     const history = messages.map((m) => ({ role: m.role, content: m.content }))
     let fullResponse = ''
+    let prevDisplayLen = 0
 
     await sendChatMessage(
       text,
@@ -277,10 +273,9 @@ export function PlayPage() {
             .replace(/```speech[\s\S]*?```/g, '')
             .replace(/```(?:gamestate|speech)[\s\S]*$/g, '')
         ).trim()
-        const prevLen = ttsDisplayLengthRef.current
-        if (!mute && display.length > prevLen) {
-          handleStreamChunkForTts(display.slice(prevLen))
-          ttsDisplayLengthRef.current = display.length
+        if (!mute && display.length > prevDisplayLen) {
+          handleStreamChunkForTts(display.slice(prevDisplayLen))
+          prevDisplayLen = display.length
         }
         setMessages((prev) => {
           const updated = [...prev]
@@ -374,7 +369,7 @@ export function PlayPage() {
       },
       () => {
         setStreaming(false)
-        if (!mute) flushSentenceBuffer()
+        if (!mute) flushTtsBuffer()
         const cleanResponse = stripOracleText(
           fullResponse
             .replace(/```gamestate[\s\S]*?```/g, '')
@@ -409,6 +404,7 @@ export function PlayPage() {
 
   const endSession = async () => {
     if (!currentSession || !id) return
+    const endedSession = { ...currentSession }
     autoSavingRef.current = true
     setSummarizing(true)
     try {
@@ -420,8 +416,11 @@ export function PlayPage() {
     setCurrentSession(null)
     setMessages([])
     stopAudio()
-    await fetchSessions()
+    const { sessions: refreshed } = await listSessions(id)
+    setSessions(refreshed)
     autoSavingRef.current = false
+    const updated = refreshed.find((s: Session) => s.id === endedSession.id)
+    if (updated) setReadingSession(updated)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
