@@ -109,7 +109,7 @@ export function useSpeech() {
 
   const enqueueSentence = useCallback(
     (text: string, speaker: VoiceProfileKey = 'narrator') => {
-      stoppedRef.current = false
+      if (stoppedRef.current) return
       enqueue(text, speaker)
     },
     [enqueue],

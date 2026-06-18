@@ -4,7 +4,7 @@ import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
   PanelLeftOpen, PanelLeftClose, Bot, Gauge, Shield,
-  Volume2, VolumeX, Square, Pause, Play,
+  Volume2, VolumeX, Square, Pause, Play, Dices,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCombatStore } from '@/stores/combatStore'
@@ -34,6 +34,8 @@ import { SessionHistory } from '@/components/session/SessionHistory'
 import { SpeechSettingsPanel } from '@/components/settings/SpeechSettingsPanel'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useSpeechStore } from '@/stores/speechStore'
+import { MicButton } from '@/components/chat/MicButton'
+import type { SttLanguage } from '@/hooks/useSpeechRecognition'
 
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
@@ -61,6 +63,7 @@ export function PlayPage() {
   const user = useAuthStore((s) => s.user)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
+  const [skillInput, setSkillInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [currentSession, setCurrentSession] = useState<Session | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
@@ -77,6 +80,8 @@ export function PlayPage() {
   const ttsLanguage = useSpeechStore((s) => s.ttsLanguage)
   const sentenceBufferRef = useRef('')
   const ttsDisplayLengthRef = useRef(0)
+  const [micListening, setMicListening] = useState(false)
+  const sttLang: SttLanguage = ttsLanguage === 'sv' ? 'sv-SE' : 'en-US'
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -110,7 +115,8 @@ export function PlayPage() {
   const stripOracleText = (text: string) =>
     text
       .replace(/\[Oracle:.*?\]/g, '')
-      .replace(/^Roll:\s*\d+.*$/gm, '')
+      .replace(/^>?\s*Roll:\s*\d+.*$/gim, '')
+      .replace(/^>?\s*\d+\s*[—–-]\s*(Exceptional\s+)?(Yes|No|Extreme\s+Yes|Extreme\s+No)\.?.*$/gim, '')
       .replace(/\n{3,}/g, '\n\n')
 
   const cleanForSpeech = (text: string) =>
@@ -121,7 +127,8 @@ export function PlayPage() {
       .replace(/^#{1,3}\s+.+$/gm, '')
       .replace(/\[.*?\]\(.*?\)/g, '')
       .replace(/\[.*?\]/g, '')
-      .replace(/^Roll:\s*\d+.*$/gm, '')
+      .replace(/^>?\s*Roll:\s*\d+.*$/gim, '')
+      .replace(/^>?\s*\d+\s*[—–-]\s*(Exceptional\s+)?(Yes|No|Extreme\s+Yes|Extreme\s+No)\.?.*$/gim, '')
       .trim()
 
   const flushSentenceBuffer = useCallback(() => {
@@ -179,9 +186,11 @@ export function PlayPage() {
     inputRef.current?.focus()
   }
 
-  const handleSend = async () => {
-    const text = input.trim()
+  const handleSend = async (opts?: { text?: string; displayText?: string; muteResponse?: boolean }) => {
+    const text = (opts?.text ?? input).trim()
     if (!text || streaming) return
+    const mute = opts?.muteResponse ?? false
+    const display = opts?.displayText ?? text
 
     let session = currentSession
     if (!session) {
@@ -191,15 +200,15 @@ export function PlayPage() {
       await fetchSessions()
     }
 
-    setInput('')
+    if (!opts?.text) setInput('')
     setStreaming(true)
     sentenceBufferRef.current = ''
     ttsDisplayLengthRef.current = 0
     stopSpeech()
 
-    const userMessage: Message = { role: 'user', content: text }
+    const userMessage: Message = { role: 'user', content: display }
     setMessages((prev) => [...prev, userMessage])
-    saveMessage(session!.id, id, 'user', text)
+    saveMessage(session!.id, id, 'user', display)
 
     const assistantMessage: Message = { role: 'assistant', content: '' }
     setMessages((prev) => [...prev, assistantMessage])
@@ -221,7 +230,7 @@ export function PlayPage() {
             .replace(/```(?:gamestate|speech)[\s\S]*$/g, '')
         ).trim()
         const prevLen = ttsDisplayLengthRef.current
-        if (display.length > prevLen) {
+        if (!mute && display.length > prevLen) {
           handleStreamChunkForTts(display.slice(prevLen))
           ttsDisplayLengthRef.current = display.length
         }
@@ -304,7 +313,7 @@ export function PlayPage() {
       },
       () => {
         setStreaming(false)
-        flushSentenceBuffer()
+        if (!mute) flushSentenceBuffer()
         const cleanResponse = stripOracleText(
           fullResponse
             .replace(/```gamestate[\s\S]*?```/g, '')
@@ -357,6 +366,45 @@ export function PlayPage() {
       handleSend()
     }
   }
+
+  const handleSkillSend = () => {
+    const text = skillInput.trim()
+    if (!text || streaming) return
+    setSkillInput('')
+
+    const num = Number(text)
+    const isResult = Number.isInteger(num) && num >= 1 && num <= 30
+
+    if (isResult) {
+      handleSend({ text: `[Skill Check Result: ${num}] The player rolled a ${num}. Narrate the outcome.`, displayText: `🎲 ${num}`, muteResponse: false })
+    } else {
+      handleSend({ text: `[Skill Check Request] ${text}`, displayText: text, muteResponse: false })
+    }
+  }
+
+  const handleSkillKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSkillSend()
+    }
+  }
+
+  const handleSttTranscript = useCallback((text: string) => {
+    setInput((prev) => {
+      const trimmed = prev.trimEnd()
+      return trimmed ? `${trimmed} ${text}` : text
+    })
+  }, [])
+
+  const handleSttInterim = useCallback((text: string) => {
+    // Interim text is shown as placeholder-style feedback via micListening state
+    if (text && inputRef.current) {
+      inputRef.current.placeholder = text || 'What do you do?'
+    }
+    if (!text && inputRef.current) {
+      inputRef.current.placeholder = 'What do you do?'
+    }
+  }, [])
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
@@ -522,7 +570,7 @@ export function PlayPage() {
                           <span className="text-xs font-medium text-gold">Dungeon Master</span>
                           {speechEnabled && msg.content && !(streaming && i === messages.length - 1) && (
                             <button
-                              onClick={() => speakPlain(cleanForSpeech(msg.content))}
+                              onClick={() => { stopSpeech(); speakPlain(cleanForSpeech(msg.content)) }}
                               className="rounded p-1 text-gray-600 hover:text-gold transition-colors"
                               title="Läs upp igen"
                             >
@@ -552,7 +600,34 @@ export function PlayPage() {
           </div>
 
           {/* Input */}
-          <div className="border-t border-navy bg-dark-navy/50 px-4 py-3">
+          <div className="border-t border-navy bg-dark-navy/50 px-4 py-3 space-y-2">
+            {/* Skill check row */}
+            <div className="mx-auto flex max-w-3xl items-end gap-3">
+              <div className="flex items-center gap-2 text-gray-500">
+                <Dices className="h-4 w-4 shrink-0" />
+              </div>
+              <textarea
+                value={skillInput}
+                onChange={(e) => setSkillInput(e.target.value)}
+                onKeyDown={handleSkillKeyDown}
+                placeholder="Skill check (e.g. Perception) or roll result (1–30)"
+                rows={1}
+                className="flex-1 resize-none rounded-lg border border-navy bg-dark-navy/60 px-3 py-2 text-xs text-parchment placeholder-gray-600 focus:border-purple-500/50 focus:outline-none"
+              />
+              <button
+                onClick={handleSkillSend}
+                disabled={!skillInput.trim() || streaming}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-600/80 text-parchment transition-colors hover:bg-purple-500 disabled:opacity-30"
+                title="Roll skill check"
+              >
+                {streaming ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Dices className="h-3 w-3" />
+                )}
+              </button>
+            </div>
+            {/* Narrative input row */}
             <div className="mx-auto flex max-w-3xl items-end gap-3">
               <textarea
                 ref={inputRef}
@@ -561,7 +636,16 @@ export function PlayPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="What do you do?"
                 rows={1}
-                className="flex-1 resize-none rounded-xl border border-navy bg-dark-navy px-4 py-3 text-sm text-parchment placeholder-gray-600 focus:border-gold/50 focus:outline-none"
+                className={`flex-1 resize-none rounded-xl border bg-dark-navy px-4 py-3 text-sm text-parchment placeholder-gray-600 focus:border-gold/50 focus:outline-none transition-colors ${
+                  micListening ? 'border-red-500/40' : 'border-navy'
+                }`}
+              />
+              <MicButton
+                lang={sttLang}
+                disabled={streaming}
+                onTranscript={handleSttTranscript}
+                onInterim={handleSttInterim}
+                onListeningChange={setMicListening}
               />
               <button
                 onClick={handleSend}
