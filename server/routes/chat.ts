@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
+import crypto from 'crypto'
 import { supabaseAdmin } from '../lib/supabase-admin'
 import { buildSystemPrompt, MAX_HISTORY_MESSAGES, MAX_RESPONSE_TOKENS } from '../prompts/dm-system'
 import type { Campaign, AiProvider } from '../../src/types/database'
@@ -310,13 +311,17 @@ async function processGameState(
   }
 
   if (gs.npcMet) {
-    await supabaseAdmin.from('npcs').insert({
+    const { data: newNpc } = await supabaseAdmin.from('npcs').insert({
       campaign_id: campaignId,
       name: gs.npcMet.name,
       race: gs.npcMet.race || null,
       description: gs.npcMet.description || null,
       disposition: gs.npcMet.disposition || 'neutral',
-    })
+    }).select('id, campaign_id, name, race, occupation, description').single()
+
+    if (newNpc) {
+      generateNpcPortraitAsync(newNpc)
+    }
   }
 
   if (gs.questUpdate) {
@@ -423,4 +428,73 @@ async function processGameState(
         .eq('campaign_id', campaignId)
     }
   }
+}
+
+function generateNpcPortraitAsync(npc: {
+  id: string
+  campaign_id: string
+  name: string
+  race?: string | null
+  occupation?: string | null
+  description?: string | null
+}) {
+  const { data: campaign } = supabaseAdmin
+    .from('campaigns')
+    .select('image_generation_enabled')
+    .eq('id', npc.campaign_id)
+    .single()
+    .then(async ({ data: camp }) => {
+      if (!camp?.image_generation_enabled) return
+
+      const parts = [`Fantasy character portrait of ${npc.name}`]
+      if (npc.race || npc.occupation) {
+        parts[0] += `, a ${[npc.race, npc.occupation].filter(Boolean).join(' ')}`
+      }
+      if (npc.description) parts.push(npc.description)
+      parts.push('Style: detailed fantasy oil painting, dramatic lighting, dark background.')
+      parts.push('Do not include any text, labels, or watermarks. Square format, bust portrait.')
+      const prompt = parts.join('. ')
+      const promptHash = crypto.createHash('sha256').update(prompt).digest('hex').slice(0, 16)
+
+      try {
+        const response = await openai.images.generate({
+          model: 'dall-e-3',
+          prompt,
+          n: 1,
+          size: '1024x1024',
+          quality: 'standard',
+          response_format: 'b64_json',
+        })
+
+        const b64 = response.data[0].b64_json
+        if (!b64) return
+
+        const buffer = Buffer.from(b64, 'base64')
+        const storagePath = `${npc.campaign_id}/npc_portrait/${promptHash}.png`
+
+        await supabaseAdmin.storage
+          .from('generated-images')
+          .upload(storagePath, buffer, { contentType: 'image/png', upsert: true })
+
+        const { data: urlData } = supabaseAdmin.storage
+          .from('generated-images')
+          .getPublicUrl(storagePath)
+
+        await supabaseAdmin.from('generated_images').upsert({
+          campaign_id: npc.campaign_id,
+          prompt_hash: promptHash,
+          image_type: 'npc_portrait',
+          storage_path: storagePath,
+          public_url: urlData.publicUrl,
+        }, { onConflict: 'campaign_id,prompt_hash' })
+
+        await supabaseAdmin
+          .from('npcs')
+          .update({ portrait_url: urlData.publicUrl })
+          .eq('id', npc.id)
+      } catch (err) {
+        console.error('Auto portrait generation failed:', err instanceof Error ? err.message : err)
+      }
+    })
+  void data
 }

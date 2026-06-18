@@ -28,6 +28,7 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: Props)
     character_name: '',
     character_class: '',
     status: 'active' as Campaign['status'],
+    image_generation_enabled: true,
   })
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: Props)
         character_name: campaign.character_name ?? '',
         character_class: campaign.character_class ?? '',
         status: campaign.status,
+        image_generation_enabled: campaign.image_generation_enabled ?? true,
       })
     }
   }, [open, campaign])
@@ -143,6 +145,26 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: Props)
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-navy bg-midnight px-3 py-2">
+            <div>
+              <span className="text-xs font-medium text-gold">AI Image Generation</span>
+              <p className="text-[10px] text-gray-600">Generate NPC portraits and location art (uses DALL-E 3)</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, image_generation_enabled: !form.image_generation_enabled })}
+              className={`relative h-5 w-9 rounded-full transition-colors ${
+                form.image_generation_enabled ? 'bg-gold' : 'bg-navy'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                  form.image_generation_enabled ? 'left-[18px]' : 'left-0.5'
+                }`}
+              />
+            </button>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

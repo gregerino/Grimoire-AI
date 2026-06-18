@@ -21,6 +21,7 @@ export interface Campaign {
   chaos_factor: number
   current_hp: number | null
   max_hp: number | null
+  image_generation_enabled: boolean
   status: 'active' | 'paused' | 'completed'
   created_at: string
   updated_at: string
@@ -48,6 +49,7 @@ export interface Npc {
   location: string | null
   backstory: string | null
   relationship: string | null
+  portrait_url: string | null
   last_seen_session_id: string | null
   created_at: string
 }

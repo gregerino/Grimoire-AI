@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Sparkles, Loader2, Skull, Heart, MapPin, BookOpen, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { aiUpdateNpc } from '@/lib/api'
+import { NpcPortrait } from './NpcPortrait'
 import type { Npc } from '@/types/database'
 
 interface Props {
@@ -101,6 +102,16 @@ export function NpcDetailModal({ npc, open, onClose, onUpdated }: Props) {
         </div>
 
         <div className="space-y-4 p-5">
+          {/* Portrait */}
+          <div className="mx-auto w-48">
+            <NpcPortrait
+              npcId={npc.id}
+              portraitUrl={npc.portrait_url}
+              name={npc.name}
+              onPortraitGenerated={(url) => onUpdated({ ...npc, portrait_url: url })}
+            />
+          </div>
+
           {/* Basic info */}
           <div className="flex flex-wrap gap-2 text-xs text-gray-500">
             {npc.race && <span className="rounded bg-navy px-2 py-1">{npc.race}</span>}

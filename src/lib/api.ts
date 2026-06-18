@@ -215,6 +215,30 @@ export function aiUpdateNpc(npcId: string, context: string) {
   })
 }
 
+// --- Image Generation ---
+
+export async function generateNpcPortrait(
+  npcId: string,
+  sessionId?: string | null,
+): Promise<{ url: string | null; reason?: string }> {
+  return jsonFetch(`${API_BASE}/image/npc/${npcId}`, {
+    method: 'POST',
+    body: JSON.stringify({ session_id: sessionId }),
+  })
+}
+
+export async function generateImage(
+  campaignId: string,
+  type: 'npc_portrait' | 'location',
+  data: Record<string, unknown>,
+  sessionId?: string | null,
+): Promise<{ url: string | null; reason?: string }> {
+  return jsonFetch(`${API_BASE}/image/generate`, {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId, session_id: sessionId, type, data }),
+  })
+}
+
 // --- TTS ---
 
 export async function fetchTtsAudio(text: string, speaker: string, voiceId?: string | null): Promise<Blob> {

@@ -83,7 +83,16 @@ export function NpcTab({ campaignId }: Props) {
               className={`cursor-pointer rounded-xl border border-navy bg-dark-navy p-4 transition-all hover:border-gold/20 ${!npc.is_alive ? 'opacity-50' : ''}`}
               onClick={() => setSelectedNpc(npc)}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                {npc.portrait_url && (
+                  <img
+                    src={npc.portrait_url}
+                    alt={npc.name}
+                    className="h-10 w-10 shrink-0 rounded-lg object-cover border border-navy"
+                    loading="lazy"
+                  />
+                )}
+                <div className="flex flex-1 items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-parchment">{npc.name}</span>
@@ -109,6 +118,7 @@ export function NpcTab({ campaignId }: Props) {
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
+              </div>
               </div>
             </div>
           ))}
