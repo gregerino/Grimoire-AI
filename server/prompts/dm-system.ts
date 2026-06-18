@@ -162,6 +162,22 @@ Rules for the speech block:
 - Omit mechanical details (dice rolls, AC, HP numbers) from speech text — those are visual-only
 - The speech block is separate from and in addition to the gamestate block
 
+# Audio Cues
+The app has an ambient sound and music system. Include an "audio" object in your gamestate block to control the soundscape. Only include audio when the scene changes — not every response.
+
+Available ambient types: "tavern", "forest", "dungeon", "city", "cave", "field", "sea"
+Available music moods: "exploration", "combat", "tension", "mystery", "rest", "triumph"
+Available sfx: "sword_hit", "spell_cast", "door_creak", "loot_pickup", "level_up", "footsteps_stone", "dice_roll", "death"
+
+Example: "audio": { "ambient": "dungeon", "music": "tension", "sfx": ["door_creak", "footsteps_stone"] }
+
+Guidelines:
+- Set ambient when the location changes (entering a tavern, stepping into a forest)
+- Set music when the mood shifts (combat starts, a mystery unfolds, resting at camp)
+- Set sfx for punctual events (a sword strike, finding loot, opening a door)
+- Combat always sets music to "combat". When combat ends, switch to "exploration" or "rest"
+- You can set ambient to null or music to null to stop that layer
+
 # Structured Output
 After your narrative, you MUST include a JSON block to update game state whenever something mechanically relevant happens (combat, damage, healing, loot, conditions, location changes, etc.). Wrap it exactly like this:
 
@@ -184,7 +200,8 @@ After your narrative, you MUST include a JSON block to update game state wheneve
   "spellSlotUsed": { "level": 1 },
   "deathSaveResult": { "roll": 14 },
   "restType": "short",
-  "hitDiceUsed": 2
+  "hitDiceUsed": 2,
+  "audio": { "ambient": "dungeon", "music": "tension", "sfx": ["door_creak"] }
 }
 \`\`\`
 

@@ -4,7 +4,7 @@ import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
   PanelLeftOpen, PanelLeftClose, Bot, Gauge, Shield,
-  Volume2, VolumeX, Square, Pause, Play, Dices,
+  Volume2, VolumeX, Square, Pause, Play, Dices, Music,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCombatStore } from '@/stores/combatStore'
@@ -35,6 +35,9 @@ import { SpeechSettingsPanel } from '@/components/settings/SpeechSettingsPanel'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useSpeechStore } from '@/stores/speechStore'
 import { MicButton } from '@/components/chat/MicButton'
+import { AudioMixer } from '@/components/audio/AudioMixer'
+import { useAudio } from '@/hooks/useAudio'
+import type { AmbientType, MusicMood, SfxType } from '@/stores/audioStore'
 import type { SttLanguage } from '@/hooks/useSpeechRecognition'
 
 import type { Session, Campaign, AiProvider } from '@/types/database'
@@ -44,7 +47,7 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
@@ -56,6 +59,7 @@ const panelTabs = [
   { id: 'library' as const, icon: FileText, label: 'PDFs' },
   { id: 'history' as const, icon: History, label: 'Sessions' },
   { id: 'speech' as const, icon: Volume2, label: 'Röst' },
+  { id: 'audio' as const, icon: Music, label: 'Ljud' },
 ]
 
 export function PlayPage() {
@@ -82,6 +86,7 @@ export function PlayPage() {
   const ttsDisplayLengthRef = useRef(0)
   const [micListening, setMicListening] = useState(false)
   const sttLang: SttLanguage = ttsLanguage === 'sv' ? 'sv-SE' : 'en-US'
+  const { playAmbient, playMusic, playSfx, stopAll: stopAudio, tryUnlock: unlockAudio } = useAudio()
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -189,6 +194,7 @@ export function PlayPage() {
   const handleSend = async (opts?: { text?: string; displayText?: string; muteResponse?: boolean }) => {
     const text = (opts?.text ?? input).trim()
     if (!text || streaming) return
+    unlockAudio()
     const mute = opts?.muteResponse ?? false
     const display = opts?.displayText ?? text
 
@@ -310,6 +316,20 @@ export function PlayPage() {
         }
 
         if (gameState.deathSaveResult) combat.rollDeathSave(gameState.deathSaveResult.roll)
+
+        if (gameState.audio) {
+          if (gameState.audio.ambient !== undefined) {
+            playAmbient(gameState.audio.ambient as AmbientType | null)
+          }
+          if (gameState.audio.music !== undefined) {
+            playMusic(gameState.audio.music as MusicMood | null)
+          }
+          if (gameState.audio.sfx) {
+            for (const sfx of gameState.audio.sfx) {
+              playSfx(sfx as SfxType)
+            }
+          }
+        }
       },
       () => {
         setStreaming(false)
@@ -357,6 +377,7 @@ export function PlayPage() {
     setSummarizing(false)
     setCurrentSession(null)
     setMessages([])
+    stopAudio()
     await fetchSessions()
   }
 
@@ -534,6 +555,7 @@ export function PlayPage() {
               {sidebarPanel === 'combat' && <CombatTracker />}
               {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
               {sidebarPanel === 'speech' && <SpeechSettingsPanel />}
+              {sidebarPanel === 'audio' && <AudioMixer />}
             </div>
           </div>
         )}

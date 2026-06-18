@@ -235,6 +235,11 @@ interface GameState {
   restType?: 'short' | 'long'
   hitDiceUsed?: number
   speech?: Array<{ speaker: string; text: string }>
+  audio?: {
+    ambient?: string
+    music?: string
+    sfx?: string[]
+  }
 }
 
 function parseSpeechSegments(text: string): Array<{ speaker: string; text: string }> | null {
