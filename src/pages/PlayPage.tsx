@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
-  PanelLeftOpen, PanelLeftClose, Bot, Gauge, Dices, Shield,
+  PanelLeftOpen, PanelLeftClose, Bot, Gauge, Shield,
   Volume2, VolumeX, Square, Pause, Play,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -20,13 +20,6 @@ import {
 } from '@/lib/api'
 import type { GameState } from '@/lib/api'
 import type { Condition } from '@/types/combat'
-import {
-  rollFateChart,
-  rollRandomEvent,
-  ODDS_ORDER,
-  ODDS_LABELS,
-  type OddsLevel,
-} from '@/lib/fate-chart'
 import { supabase } from '@/lib/supabase'
 import { NpcTab } from '@/components/campaign/tabs/NpcTab'
 import { QuestTab } from '@/components/campaign/tabs/QuestTab'
@@ -34,7 +27,7 @@ import { InventoryTab } from '@/components/campaign/tabs/InventoryTab'
 import { PdfLibrary } from '@/components/pdf/PdfLibrary'
 import { GameStatePanel } from '@/components/chat/GameStatePanel'
 import { Markdown } from '@/components/chat/Markdown'
-import { FateChartPanel } from '@/components/oracle/FateChartPanel'
+
 import { CharacterPanel } from '@/components/character/CharacterPanel'
 import { CombatTracker } from '@/components/combat/CombatTracker'
 import { SessionHistory } from '@/components/session/SessionHistory'
@@ -49,13 +42,12 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'oracle' | 'character' | 'combat' | 'speech' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
   { id: 'combat' as const, icon: Shield, label: 'Combat' },
   { id: 'character' as const, icon: User, label: 'Character' },
-  { id: 'oracle' as const, icon: Dices, label: 'Oracle' },
   { id: 'npcs' as const, icon: Swords, label: 'NPCs' },
   { id: 'quests' as const, icon: ScrollText, label: 'Quests' },
   { id: 'inventory' as const, icon: Package, label: 'Inventory' },
@@ -115,6 +107,12 @@ export function PlayPage() {
     fetchSessions()
   }, [fetchSessions])
 
+  const stripOracleText = (text: string) =>
+    text
+      .replace(/\[Oracle:.*?\]/g, '')
+      .replace(/^Roll:\s*\d+.*$/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+
   const cleanForSpeech = (text: string) =>
     text
       .replace(/```[\s\S]*?```/g, '')
@@ -123,15 +121,13 @@ export function PlayPage() {
       .replace(/^#{1,3}\s+.+$/gm, '')
       .replace(/\[.*?\]\(.*?\)/g, '')
       .replace(/\[.*?\]/g, '')
+      .replace(/^Roll:\s*\d+.*$/gm, '')
       .trim()
 
   const flushSentenceBuffer = useCallback(() => {
     const text = cleanForSpeech(sentenceBufferRef.current)
     sentenceBufferRef.current = ''
-    if (text) {
-      const speaker = /^[""“]/.test(text) ? 'elder' : 'narrator'
-      enqueueSentence(text, speaker as import('@/stores/speechStore').VoiceProfileKey)
-    }
+    if (text) enqueueSentence(text)
   }, [enqueueSentence])
 
   const handleStreamChunkForTts = useCallback(
@@ -140,15 +136,14 @@ export function PlayPage() {
       sentenceBufferRef.current += chunk
       while (true) {
         const buf = sentenceBufferRef.current
-        const match = buf.match(/[.!?…]["'""'']*\s/)
+        const match = buf.match(/[.!?…][“'””'']*\s/)
         if (!match || match.index === undefined) break
         const matchEnd = match.index + match[0].length
         const sentence = buf.slice(0, matchEnd - 1)
         sentenceBufferRef.current = buf.slice(matchEnd)
         const cleaned = cleanForSpeech(sentence)
         if (cleaned) {
-          const speaker = /^[""“]/.test(cleaned) ? 'elder' : 'narrator'
-          enqueueSentence(cleaned, speaker as import('@/stores/speechStore').VoiceProfileKey)
+          enqueueSentence(cleaned)
         }
       }
     },
@@ -184,47 +179,9 @@ export function PlayPage() {
     inputRef.current?.focus()
   }
 
-  const handleOracleCommand = (text: string): boolean => {
-    const match = text.match(/^\/oracle\s*(.*)/i)
-    if (!match) return false
-
-    const arg = match[1].trim().toLowerCase().replace(/[\s_-]+/g, '_')
-    const oddsMap: Record<string, OddsLevel> = {}
-    for (const o of ODDS_ORDER) {
-      oddsMap[o.replace(/\//g, '_')] = o
-      oddsMap[ODDS_LABELS[o].toLowerCase().replace(/[\s_-]+/g, '_')] = o
-    }
-    const odds: OddsLevel = oddsMap[arg] || '50/50'
-    const cf = campaign?.chaos_factor ?? 5
-
-    const result = rollFateChart(odds, cf)
-    const style = {
-      exceptional_yes: 'Exceptional Yes!',
-      yes: 'Yes',
-      no: 'No',
-      exceptional_no: 'Exceptional No!',
-    }
-
-    let response = `**Oracle (${ODDS_LABELS[odds]}, CF ${cf}):** ${style[result.result]} (rolled ${result.roll})`
-    if (result.randomEvent) {
-      const event = rollRandomEvent()
-      response += `\n\n**Random Event:** ${event.focus} — *${event.action} + ${event.subject}*`
-    }
-
-    setMessages((prev) => [
-      ...prev,
-      { role: 'user', content: text },
-      { role: 'assistant', content: response },
-    ])
-    setInput('')
-    return true
-  }
-
   const handleSend = async () => {
     const text = input.trim()
     if (!text || streaming) return
-
-    if (handleOracleCommand(text)) return
 
     let session = currentSession
     if (!session) {
@@ -257,11 +214,12 @@ export function PlayPage() {
       history,
       (chunk) => {
         fullResponse += chunk
-        const display = fullResponse
-          .replace(/```gamestate[\s\S]*?```/g, '')
-          .replace(/```speech[\s\S]*?```/g, '')
-          .replace(/```(?:gamestate|speech)[\s\S]*$/g, '')
-          .trim()
+        const display = stripOracleText(
+          fullResponse
+            .replace(/```gamestate[\s\S]*?```/g, '')
+            .replace(/```speech[\s\S]*?```/g, '')
+            .replace(/```(?:gamestate|speech)[\s\S]*$/g, '')
+        ).trim()
         const prevLen = ttsDisplayLengthRef.current
         if (display.length > prevLen) {
           handleStreamChunkForTts(display.slice(prevLen))
@@ -283,10 +241,11 @@ export function PlayPage() {
           if (last.role === 'assistant') {
             updated[updated.length - 1] = {
               ...last,
-              content: last.content
-                .replace(/```gamestate[\s\S]*?```/g, '')
-                .replace(/```speech[\s\S]*?```/g, '')
-                .trim(),
+              content: stripOracleText(
+                last.content
+                  .replace(/```gamestate[\s\S]*?```/g, '')
+                  .replace(/```speech[\s\S]*?```/g, '')
+              ).trim(),
             }
           }
           return updated
@@ -346,10 +305,11 @@ export function PlayPage() {
       () => {
         setStreaming(false)
         flushSentenceBuffer()
-        const cleanResponse = fullResponse
-          .replace(/```gamestate[\s\S]*?```/g, '')
-          .replace(/```speech[\s\S]*?```/g, '')
-          .trim()
+        const cleanResponse = stripOracleText(
+          fullResponse
+            .replace(/```gamestate[\s\S]*?```/g, '')
+            .replace(/```speech[\s\S]*?```/g, '')
+        ).trim()
         setMessages((prev) => {
           const updated = [...prev]
           const last = updated[updated.length - 1]
@@ -522,23 +482,6 @@ export function PlayPage() {
               {sidebarPanel === 'inventory' && <InventoryTab campaignId={id} />}
               {sidebarPanel === 'character' && (
                 <CharacterPanel campaignId={id} />
-              )}
-              {sidebarPanel === 'oracle' && campaign && (
-                <FateChartPanel
-                  chaosFactor={campaign.chaos_factor ?? 5}
-                  onOracleResult={(text) => {
-                    setMessages((prev) => [...prev, { role: 'assistant', content: text }])
-                  }}
-                  onChaosFactorChange={(newCf) => {
-                    supabase
-                      .from('campaigns')
-                      .update({ chaos_factor: newCf })
-                      .eq('id', id)
-                      .then(() => {
-                        setCampaign((prev) => prev ? { ...prev, chaos_factor: newCf } : prev)
-                      })
-                  }}
-                />
               )}
               {sidebarPanel === 'combat' && <CombatTracker />}
               {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
