@@ -204,7 +204,7 @@ export function PlayPage() {
     setStreaming(true)
     sentenceBufferRef.current = ''
     ttsDisplayLengthRef.current = 0
-    stopSpeech()
+    if (speaking) stopSpeech()
 
     const userMessage: Message = { role: 'user', content: display }
     setMessages((prev) => [...prev, userMessage])

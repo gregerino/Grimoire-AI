@@ -3,18 +3,11 @@ import { Volume2, VolumeX, Loader2 } from 'lucide-react'
 import { useSpeechStore, type TtsLanguage } from '@/stores/speechStore'
 import { fetchTtsAudio, fetchTtsVoices, type TtsVoice } from '@/lib/api'
 
-const VOICE_PREVIEWS: Record<string, { label: string; sample: string }> = {
-  narrator: { label: 'Berättare', sample: 'Dimman sveper in över den tysta dalen. Någonting rör sig i skuggorna.' },
-  villain: { label: 'Skurk — Smoky Sam', sample: 'Ni borde inte ha kommit hit. Nu är det för sent att vända om.' },
-  elder: { label: 'Äldste — Bill', sample: 'Lyssna noga, unge. Denna kunskap är urgammal och farlig.' },
-  warrior: { label: 'Krigare — Harry', sample: 'Vi slåss! Till seger eller undergång!' },
-  mystic: { label: 'Mystiker — Lily', sample: 'Stjärnorna viskar om vad som komma skall.' },
-  merchant: { label: 'Köpman — Callum', sample: 'Välkommen! Jag har precis vad ni söker, till rätt pris förstås.' },
-}
+const NARRATOR_PREVIEW = 'Hello there! I am your narrator for this campaign. Lets go on an adventure together.'
 
 export function SpeechSettingsPanel() {
   const { enabled, autoRead, defaultVoiceId, ttsLanguage, setEnabled, setAutoRead, setDefaultVoiceId, setTtsLanguage } = useSpeechStore()
-  const [playing, setPlaying] = useState<string | null>(null)
+  const [playing, setPlaying] = useState(false)
   const [voices, setVoices] = useState<TtsVoice[]>([])
   const [loadingVoices, setLoadingVoices] = useState(false)
 
@@ -27,25 +20,24 @@ export function SpeechSettingsPanel() {
       .finally(() => setLoadingVoices(false))
   }, [enabled])
 
-  const playPreview = async (speaker: string, text: string) => {
+  const playNarratorPreview = async () => {
     if (playing) return
-    setPlaying(speaker)
+    setPlaying(true)
     try {
-      const voiceId = speaker === 'narrator' ? defaultVoiceId : undefined
-      const blob = await fetchTtsAudio(text, speaker, voiceId)
+      const blob = await fetchTtsAudio(NARRATOR_PREVIEW, 'narrator', defaultVoiceId)
       const url = URL.createObjectURL(blob)
       const audio = new Audio(url)
       audio.onended = () => {
         URL.revokeObjectURL(url)
-        setPlaying(null)
+        setPlaying(false)
       }
       audio.onerror = () => {
         URL.revokeObjectURL(url)
-        setPlaying(null)
+        setPlaying(false)
       }
       await audio.play()
     } catch {
-      setPlaying(null)
+      setPlaying(false)
     }
   }
 
@@ -91,48 +83,40 @@ export function SpeechSettingsPanel() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs text-gray-400">Berättarröst (default)</label>
+            <label className="text-xs text-gray-400">Berättarröst</label>
             {loadingVoices ? (
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Laddar röster...
               </div>
             ) : (
-              <select
-                value={defaultVoiceId ?? ''}
-                onChange={(e) => setDefaultVoiceId(e.target.value || null)}
-                className="w-full rounded border border-navy bg-dark-navy px-2 py-1.5 text-xs text-parchment focus:border-gold/50 focus:outline-none"
-              >
-                <option value="">George — Warm Storyteller (standard)</option>
-                {voices.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name} {v.description ? `— ${v.description}` : ''}
-                  </option>
-                ))}
-              </select>
+              <>
+                <select
+                  value={defaultVoiceId ?? ''}
+                  onChange={(e) => setDefaultVoiceId(e.target.value || null)}
+                  className="w-full rounded border border-navy bg-dark-navy px-2 py-1.5 text-xs text-parchment focus:border-gold/50 focus:outline-none"
+                >
+                  <option value="">George — Warm Storyteller (standard)</option>
+                  {voices.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} {v.description ? `— ${v.description}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={playNarratorPreview}
+                  disabled={playing}
+                  className="mt-1.5 flex w-full items-center justify-center gap-2 rounded border border-navy px-2 py-2 text-xs text-gold/60 hover:border-gold/30 hover:bg-gold/5 hover:text-gold disabled:opacity-50 transition-colors"
+                >
+                  {playing ? (
+                    <Loader2 className="h-3 w-3 animate-spin text-gold" />
+                  ) : (
+                    <Volume2 className="h-3 w-3" />
+                  )}
+                  <span>Lyssna på rösten</span>
+                </button>
+              </>
             )}
-          </div>
-
-          <div className="space-y-1.5">
-            <span className="text-xs text-gray-400">Röstprofiler — klicka för att lyssna</span>
-            {Object.entries(VOICE_PREVIEWS).map(([key, { label, sample }]) => (
-              <button
-                key={key}
-                onClick={() => playPreview(key, sample)}
-                disabled={playing !== null}
-                className="flex w-full items-center gap-2 rounded border border-navy px-2 py-1.5 text-left text-xs text-parchment hover:border-gold/30 hover:bg-gold/5 disabled:opacity-50 transition-colors"
-              >
-                {playing === key ? (
-                  <Loader2 className="h-3 w-3 shrink-0 animate-spin text-gold" />
-                ) : (
-                  <Volume2 className="h-3 w-3 shrink-0 text-gold/60" />
-                )}
-                <div>
-                  <div className="font-medium">{label}</div>
-                  <div className="text-gray-500">{sample}</div>
-                </div>
-              </button>
-            ))}
           </div>
         </>
       )}
