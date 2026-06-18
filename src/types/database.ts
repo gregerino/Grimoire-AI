@@ -22,6 +22,7 @@ export interface Campaign {
   current_hp: number | null
   max_hp: number | null
   image_generation_enabled: boolean
+  current_location_id: string | null
   status: 'active' | 'paused' | 'completed'
   created_at: string
   updated_at: string
@@ -51,6 +52,7 @@ export interface Npc {
   relationship: string | null
   portrait_url: string | null
   last_seen_session_id: string | null
+  location_id: string | null
   created_at: string
 }
 
@@ -105,4 +107,74 @@ export interface RagResult {
     chunk_index: number
     filename: string
   }
+}
+
+export type LocationType = 'region' | 'city' | 'dungeon' | 'wilderness' | 'building'
+export type TerrainType = 'plains' | 'forest' | 'mountain' | 'desert' | 'swamp' | 'coastal' | 'underground' | 'urban' | 'arctic'
+export type ReputationTier = 'enemy' | 'unfriendly' | 'neutral' | 'friendly' | 'honored' | 'exalted'
+export type InteractionType = 'conversation' | 'combat' | 'trade' | 'quest' | 'other'
+
+export interface WorldLocation {
+  id: string
+  campaign_id: string
+  name: string
+  type: LocationType
+  parent_id: string | null
+  description: string | null
+  discovered: boolean
+  visit_count: number
+  coordinates_x: number
+  coordinates_y: number
+  image_url: string | null
+  connected_locations: string[]
+  npcs: string[]
+  active_quests: string[]
+  terrain: TerrainType | null
+  danger_level: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Faction {
+  id: string
+  campaign_id: string
+  name: string
+  description: string | null
+  alignment: string | null
+  headquarters_location_id: string | null
+  created_at: string
+}
+
+export interface FactionReputation {
+  id: string
+  campaign_id: string
+  faction_id: string
+  score: number
+  created_at: string
+  updated_at: string
+}
+
+export interface NpcInteractionLog {
+  id: string
+  campaign_id: string
+  npc_id: string
+  session_id: string | null
+  location_id: string | null
+  interaction_type: InteractionType
+  summary: string
+  sentiment: 'positive' | 'negative' | 'neutral' | null
+  disposition_before: string | null
+  disposition_after: string | null
+  created_at: string
+}
+
+export interface TravelEvent {
+  id: string
+  campaign_id: string
+  session_id: string | null
+  from_location_id: string | null
+  to_location_id: string | null
+  encounter_type: 'combat' | 'social' | 'discovery' | 'hazard' | 'peaceful' | null
+  description: string | null
+  created_at: string
 }

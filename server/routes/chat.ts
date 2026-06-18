@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import crypto from 'crypto'
 import { supabaseAdmin } from '../lib/supabase-admin'
-import { buildSystemPrompt, MAX_HISTORY_MESSAGES, MAX_RESPONSE_TOKENS } from '../prompts/dm-system'
+import { buildSystemPrompt, MAX_HISTORY_MESSAGES, MAX_RESPONSE_TOKENS, type WorldContext } from '../prompts/dm-system'
 import type { Campaign, AiProvider } from '../../src/types/database'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -72,7 +72,7 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
       return
     }
 
-    const [campaignResult, ragResults, memoriesResult] = await Promise.all([
+    const [campaignResult, ragResults, memoriesResult, locationsResult, factionsResult, reputationsResult] = await Promise.all([
       supabaseAdmin
         .from('campaigns')
         .select('*')
@@ -85,12 +85,52 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
         .eq('campaign_id', campaign_id)
         .order('created_at', { ascending: false })
         .limit(15),
+      supabaseAdmin
+        .from('world_locations')
+        .select('id, name, type, description, discovered')
+        .eq('campaign_id', campaign_id)
+        .eq('discovered', true),
+      supabaseAdmin
+        .from('factions')
+        .select('id, name')
+        .eq('campaign_id', campaign_id),
+      supabaseAdmin
+        .from('faction_reputation')
+        .select('faction_id, score')
+        .eq('campaign_id', campaign_id),
     ])
 
     const campaign = campaignResult.data as Campaign | null
     const memories = (memoriesResult.data || []).map(
       (m: { content: string }) => m.content,
     )
+
+    const locations = locationsResult.data || []
+    const factions = factionsResult.data || []
+    const reputations = reputationsResult.data || []
+
+    const tierFromScore = (score: number) => {
+      if (score <= 10) return 'enemy'
+      if (score <= 25) return 'unfriendly'
+      if (score <= 50) return 'neutral'
+      if (score <= 70) return 'friendly'
+      if (score <= 90) return 'honored'
+      return 'exalted'
+    }
+
+    const currentLoc = campaign?.current_location_id
+      ? locations.find((l: { id: string }) => l.id === campaign.current_location_id) || null
+      : null
+
+    const worldContext: WorldContext = {
+      currentLocation: currentLoc ? { name: currentLoc.name, type: currentLoc.type, description: currentLoc.description } : null,
+      factionReputations: factions.map((f: { id: string; name: string }) => {
+        const rep = reputations.find((r: { faction_id: string }) => r.faction_id === f.id)
+        const score = rep?.score ?? 50
+        return { name: f.name, score, tier: tierFromScore(score) }
+      }),
+      discoveredLocations: locations.map((l: { name: string }) => l.name),
+    }
 
     const provider: AiProvider =
       overrideProvider === 'openai' || overrideProvider === 'claude'
@@ -109,7 +149,7 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
       }
     }
 
-    const systemPrompt = buildSystemPrompt(campaign, ragResults, memories, activeConditions, ttsLanguage)
+    const systemPrompt = buildSystemPrompt(campaign, ragResults, memories, activeConditions, ttsLanguage, worldContext)
 
     const trimmedHistory = history.slice(-MAX_HISTORY_MESSAGES)
     const chatMessages = [
@@ -240,6 +280,38 @@ interface GameState {
     ambient?: string
     music?: string
     sfx?: string[]
+  }
+  locationUpdate?: {
+    name: string
+    type: 'region' | 'city' | 'dungeon' | 'wilderness' | 'building'
+    description?: string
+    parentName?: string
+    terrain?: string
+    coordinates?: { x: number; y: number }
+    discovered?: boolean
+    connectedTo?: string[]
+  }
+  reputationChange?: {
+    factionName: string
+    change: number
+    reason?: string
+  }
+  factionMet?: {
+    name: string
+    description?: string
+    alignment?: string
+  }
+  npcInteraction?: {
+    npcName: string
+    type: 'conversation' | 'combat' | 'trade' | 'quest' | 'other'
+    summary: string
+    sentiment?: 'positive' | 'negative' | 'neutral'
+  }
+  travelStart?: {
+    from: string
+    to: string
+    terrain?: string
+    dangerLevel?: number
   }
 }
 
@@ -428,6 +500,235 @@ async function processGameState(
         .eq('campaign_id', campaignId)
     }
   }
+
+  let resolvedLocationId: string | null = null
+
+  if (gs.locationUpdate) {
+    const loc = gs.locationUpdate
+    const { data: existing } = await supabaseAdmin
+      .from('world_locations')
+      .select('id, visit_count')
+      .eq('campaign_id', campaignId)
+      .eq('name', loc.name)
+      .single()
+
+    if (existing) {
+      resolvedLocationId = existing.id
+      const locUpdates: Record<string, unknown> = {
+        discovered: true,
+        visit_count: existing.visit_count + 1,
+      }
+      if (loc.description) locUpdates.description = loc.description
+      if (loc.terrain) locUpdates.terrain = loc.terrain
+      await supabaseAdmin
+        .from('world_locations')
+        .update(locUpdates)
+        .eq('id', existing.id)
+    } else {
+      let parentId: string | null = null
+      if (loc.parentName) {
+        const { data: parent } = await supabaseAdmin
+          .from('world_locations')
+          .select('id')
+          .eq('campaign_id', campaignId)
+          .eq('name', loc.parentName)
+          .single()
+        parentId = parent?.id ?? null
+      }
+
+      const coords = loc.coordinates ?? {
+        x: Math.random() * 800 + 100,
+        y: Math.random() * 600 + 100,
+      }
+
+      const { data: newLoc } = await supabaseAdmin
+        .from('world_locations')
+        .insert({
+          campaign_id: campaignId,
+          name: loc.name,
+          type: loc.type || 'building',
+          parent_id: parentId,
+          description: loc.description || null,
+          discovered: true,
+          visit_count: 1,
+          coordinates_x: coords.x,
+          coordinates_y: coords.y,
+          terrain: loc.terrain || null,
+        })
+        .select('id, campaign_id, name, type, description')
+        .single()
+
+      if (newLoc) {
+        resolvedLocationId = newLoc.id
+        generateLocationImageAsync(newLoc)
+      }
+    }
+
+    if (loc.connectedTo && resolvedLocationId) {
+      for (const connName of loc.connectedTo) {
+        const { data: connLoc } = await supabaseAdmin
+          .from('world_locations')
+          .select('id, connected_locations')
+          .eq('campaign_id', campaignId)
+          .eq('name', connName)
+          .single()
+        if (connLoc) {
+          const connIds = connLoc.connected_locations as string[] || []
+          if (!connIds.includes(resolvedLocationId)) {
+            await supabaseAdmin
+              .from('world_locations')
+              .update({ connected_locations: [...connIds, resolvedLocationId] })
+              .eq('id', connLoc.id)
+          }
+          const { data: thisLoc } = await supabaseAdmin
+            .from('world_locations')
+            .select('connected_locations')
+            .eq('id', resolvedLocationId)
+            .single()
+          const thisConnIds = (thisLoc?.connected_locations as string[]) || []
+          if (!thisConnIds.includes(connLoc.id)) {
+            await supabaseAdmin
+              .from('world_locations')
+              .update({ connected_locations: [...thisConnIds, connLoc.id] })
+              .eq('id', resolvedLocationId)
+          }
+        }
+      }
+    }
+
+    if (resolvedLocationId) {
+      await supabaseAdmin
+        .from('campaigns')
+        .update({ current_location_id: resolvedLocationId })
+        .eq('id', campaignId)
+    }
+  }
+
+  if (gs.factionMet) {
+    const { data: existing } = await supabaseAdmin
+      .from('factions')
+      .select('id')
+      .eq('campaign_id', campaignId)
+      .eq('name', gs.factionMet.name)
+      .single()
+
+    if (!existing) {
+      const { data: newFaction } = await supabaseAdmin
+        .from('factions')
+        .insert({
+          campaign_id: campaignId,
+          name: gs.factionMet.name,
+          description: gs.factionMet.description || null,
+          alignment: gs.factionMet.alignment || null,
+        })
+        .select('id')
+        .single()
+
+      if (newFaction) {
+        await supabaseAdmin.from('faction_reputation').insert({
+          campaign_id: campaignId,
+          faction_id: newFaction.id,
+          score: 50,
+        })
+      }
+    }
+  }
+
+  if (gs.reputationChange) {
+    const { data: faction } = await supabaseAdmin
+      .from('factions')
+      .select('id')
+      .eq('campaign_id', campaignId)
+      .eq('name', gs.reputationChange.factionName)
+      .single()
+
+    if (faction) {
+      const { data: rep } = await supabaseAdmin
+        .from('faction_reputation')
+        .select('score')
+        .eq('campaign_id', campaignId)
+        .eq('faction_id', faction.id)
+        .single()
+
+      if (rep) {
+        const newScore = Math.max(0, Math.min(100, rep.score + gs.reputationChange.change))
+        await supabaseAdmin
+          .from('faction_reputation')
+          .update({ score: newScore })
+          .eq('campaign_id', campaignId)
+          .eq('faction_id', faction.id)
+      }
+    }
+  }
+
+  if (gs.npcInteraction) {
+    const { data: npc } = await supabaseAdmin
+      .from('npcs')
+      .select('id, disposition')
+      .eq('campaign_id', campaignId)
+      .eq('name', gs.npcInteraction.npcName)
+      .single()
+
+    if (npc) {
+      const { data: campaign } = await supabaseAdmin
+        .from('campaigns')
+        .select('current_location_id')
+        .eq('id', campaignId)
+        .single()
+
+      await supabaseAdmin.from('npc_interaction_logs').insert({
+        campaign_id: campaignId,
+        npc_id: npc.id,
+        session_id: sessionId || null,
+        location_id: campaign?.current_location_id || null,
+        interaction_type: gs.npcInteraction.type || 'conversation',
+        summary: gs.npcInteraction.summary,
+        sentiment: gs.npcInteraction.sentiment || null,
+        disposition_before: npc.disposition,
+        disposition_after: npc.disposition,
+      })
+    }
+  }
+
+  if (gs.travelStart) {
+    const [fromResult, toResult] = await Promise.all([
+      supabaseAdmin
+        .from('world_locations')
+        .select('id')
+        .eq('campaign_id', campaignId)
+        .eq('name', gs.travelStart.from)
+        .single(),
+      supabaseAdmin
+        .from('world_locations')
+        .select('id')
+        .eq('campaign_id', campaignId)
+        .eq('name', gs.travelStart.to)
+        .single(),
+    ])
+
+    await supabaseAdmin.from('travel_events').insert({
+      campaign_id: campaignId,
+      session_id: sessionId || null,
+      from_location_id: fromResult.data?.id || null,
+      to_location_id: toResult.data?.id || null,
+    })
+  }
+
+  if (gs.npcMet && resolvedLocationId) {
+    const { data: npcRecord } = await supabaseAdmin
+      .from('npcs')
+      .select('id')
+      .eq('campaign_id', campaignId)
+      .eq('name', gs.npcMet.name)
+      .single()
+
+    if (npcRecord) {
+      await supabaseAdmin
+        .from('npcs')
+        .update({ location_id: resolvedLocationId })
+        .eq('id', npcRecord.id)
+    }
+  }
 }
 
 function generateNpcPortraitAsync(npc: {
@@ -497,4 +798,69 @@ function generateNpcPortraitAsync(npc: {
       }
     })
   void data
+}
+
+function generateLocationImageAsync(location: {
+  id: string
+  campaign_id: string
+  name: string
+  type: string
+  description?: string | null
+}) {
+  const run = supabaseAdmin
+    .from('campaigns')
+    .select('image_generation_enabled')
+    .eq('id', location.campaign_id)
+    .single()
+    .then(async ({ data: camp }) => {
+      if (!camp?.image_generation_enabled) return
+
+      const parts = [`Fantasy environment: ${location.name}`]
+      if (location.description) parts.push(location.description)
+      parts.push('Style: detailed fantasy concept art, atmospheric, cinematic lighting.')
+      parts.push('Do not include any text, labels, or watermarks. Wide format landscape.')
+      const prompt = parts.join('. ')
+      const promptHash = crypto.createHash('sha256').update(prompt).digest('hex').slice(0, 16)
+
+      try {
+        const response = await openai.images.generate({
+          model: 'dall-e-3',
+          prompt,
+          n: 1,
+          size: '1792x1024',
+          quality: 'standard',
+          response_format: 'b64_json',
+        })
+
+        const b64 = response.data[0].b64_json
+        if (!b64) return
+
+        const buffer = Buffer.from(b64, 'base64')
+        const storagePath = `${location.campaign_id}/location/${promptHash}.png`
+
+        await supabaseAdmin.storage
+          .from('generated-images')
+          .upload(storagePath, buffer, { contentType: 'image/png', upsert: true })
+
+        const { data: urlData } = supabaseAdmin.storage
+          .from('generated-images')
+          .getPublicUrl(storagePath)
+
+        await supabaseAdmin.from('generated_images').upsert({
+          campaign_id: location.campaign_id,
+          prompt_hash: promptHash,
+          image_type: 'location',
+          storage_path: storagePath,
+          public_url: urlData.publicUrl,
+        }, { onConflict: 'campaign_id,prompt_hash' })
+
+        await supabaseAdmin
+          .from('world_locations')
+          .update({ image_url: urlData.publicUrl })
+          .eq('id', location.id)
+      } catch (err) {
+        console.error('Auto location image generation failed:', err instanceof Error ? err.message : err)
+      }
+    })
+  void run
 }

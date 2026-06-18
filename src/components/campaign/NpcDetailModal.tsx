@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { X, Sparkles, Loader2, Skull, Heart, MapPin, BookOpen, Users } from 'lucide-react'
+import { X, Sparkles, Loader2, Skull, Heart, MapPin, BookOpen, Users, History } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { aiUpdateNpc } from '@/lib/api'
 import { NpcPortrait } from './NpcPortrait'
+import { NpcInteractionHistory } from './NpcInteractionHistory'
 import type { Npc } from '@/types/database'
 
 interface Props {
@@ -146,6 +147,15 @@ export function NpcDetailModal({ npc, open, onClose, onUpdated }: Props) {
               </button>
             </div>
           )}
+
+          {/* Interaction History */}
+          <div className="rounded-xl border border-navy bg-midnight p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <History className="h-3.5 w-3.5 text-blue-400" />
+              <span className="text-xs font-medium text-blue-400">Interaction History</span>
+            </div>
+            <NpcInteractionHistory npcId={npc.id} campaignId={npc.campaign_id} />
+          </div>
 
           {/* AI Update */}
           <div className="rounded-xl border border-navy bg-midnight p-4">

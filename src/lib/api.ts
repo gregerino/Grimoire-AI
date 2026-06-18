@@ -145,6 +145,38 @@ export interface GameState {
     music?: string
     sfx?: string[]
   }
+  locationUpdate?: {
+    name: string
+    type: 'region' | 'city' | 'dungeon' | 'wilderness' | 'building'
+    description?: string
+    parentName?: string
+    terrain?: string
+    coordinates?: { x: number; y: number }
+    discovered?: boolean
+    connectedTo?: string[]
+  }
+  reputationChange?: {
+    factionName: string
+    change: number
+    reason?: string
+  }
+  factionMet?: {
+    name: string
+    description?: string
+    alignment?: string
+  }
+  npcInteraction?: {
+    npcName: string
+    type: 'conversation' | 'combat' | 'trade' | 'quest' | 'other'
+    summary: string
+    sentiment?: 'positive' | 'negative' | 'neutral'
+  }
+  travelStart?: {
+    from: string
+    to: string
+    terrain?: string
+    dangerLevel?: number
+  }
 }
 
 // --- Character ---
@@ -263,6 +295,71 @@ export interface TtsVoice {
 export async function fetchTtsVoices(): Promise<TtsVoice[]> {
   const res = await jsonFetch(`${API_BASE}/tts/voices`)
   return res.voices
+}
+
+// --- Locations ---
+
+export function listLocations(campaignId: string) {
+  return jsonFetch(`${API_BASE}/location/list/${campaignId}`)
+}
+
+export function createLocation(data: Record<string, unknown>) {
+  return jsonFetch(`${API_BASE}/location`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function updateLocation(id: string, updates: Record<string, unknown>) {
+  return jsonFetch(`${API_BASE}/location/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+}
+
+export function deleteLocation(id: string) {
+  return jsonFetch(`${API_BASE}/location/${id}`, { method: 'DELETE' })
+}
+
+export function connectLocations(id: string, otherId: string) {
+  return jsonFetch(`${API_BASE}/location/${id}/connect/${otherId}`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}
+
+// --- Factions ---
+
+export function listFactions(campaignId: string) {
+  return jsonFetch(`${API_BASE}/faction/list/${campaignId}`)
+}
+
+export function createFaction(data: Record<string, unknown>) {
+  return jsonFetch(`${API_BASE}/faction`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function updateFactionReputation(factionId: string, campaignId: string, change: number) {
+  return jsonFetch(`${API_BASE}/faction/${factionId}/reputation`, {
+    method: 'PATCH',
+    body: JSON.stringify({ campaign_id: campaignId, change }),
+  })
+}
+
+// --- Travel ---
+
+export function startTravel(campaignId: string, fromId: string, toId: string, sessionId?: string) {
+  return jsonFetch(`${API_BASE}/travel/start`, {
+    method: 'POST',
+    body: JSON.stringify({
+      campaign_id: campaignId,
+      from_id: fromId,
+      to_id: toId,
+      session_id: sessionId || null,
+    }),
+  })
 }
 
 // --- Chat ---

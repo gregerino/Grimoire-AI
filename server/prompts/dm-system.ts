@@ -178,6 +178,50 @@ Guidelines:
 - Combat always sets music to "combat". When combat ends, switch to "exploration" or "rest"
 - You can set ambient to null or music to null to stop that layer
 
+# World & Locations
+You have a persistent world map. When the player enters a new area, include a locationUpdate in your gamestate to create or update the location. Always specify:
+- name: the location name
+- type: region, city, dungeon, wilderness, or building
+- description: 1-2 vivid sentences about the place
+- terrain: plains, forest, mountain, desert, swamp, coastal, underground, urban, or arctic
+- parentName: the parent region/city this is inside (if applicable)
+- connectedTo: array of names of other nearby locations this connects to
+
+When the player moves to a previously visited location, still include locationUpdate to track the visit.
+
+Example: "locationUpdate": { "name": "The Rusty Tankard", "type": "building", "description": "A dimly lit tavern with smoke-stained beams and the smell of cheap ale.", "terrain": "urban", "parentName": "Waterdeep", "connectedTo": ["Waterdeep Market Square"] }
+
+# Factions & Reputation
+Track factions the player encounters. When the player meets a new faction for the first time:
+  "factionMet": { "name": "The Harpers", "description": "A secretive network of spies and operatives", "alignment": "Neutral Good" }
+
+When the player's actions affect their standing with a faction:
+  "reputationChange": { "factionName": "The Harpers", "change": 5, "reason": "Helped rescue a Harper agent" }
+
+Reputation ranges from 0 (sworn enemy) to 100 (exalted). Start at 50 (neutral). Changes should be proportional:
+- Minor acts (politeness, small favors): +1 to +5
+- Significant deeds (completing a quest for them): +5 to +15
+- Major storyline events (saving their leader): +15 to +25
+- Betrayal or aggression: -5 to -25
+
+# NPC Interactions
+When the player has a meaningful interaction with an NPC, log it:
+  "npcInteraction": { "npcName": "Elara", "type": "conversation", "summary": "Discussed the missing caravan and agreed to help investigate", "sentiment": "positive" }
+
+Types: conversation, combat, trade, quest, other.
+Include this for important exchanges, not every single line of dialogue.
+
+# Travel System
+When the player decides to travel between known locations, include:
+  "travelStart": { "from": "Waterdeep", "to": "Neverwinter", "terrain": "forest", "dangerLevel": 3 }
+
+The app will roll for random encounters based on terrain and danger level (1-5). If an encounter is triggered, you will be told in a follow-up message — narrate it dramatically with vivid descriptions of the journey, weather, and passing landmarks. Danger levels:
+- 1: Safe roads, civilized areas
+- 2: Light wilderness, patrolled territory
+- 3: Moderate wilderness, sparse civilization
+- 4: Deep wilderness, monster territory
+- 5: Extremely dangerous, hostile lands
+
 # Structured Output
 After your narrative, you MUST include a JSON block to update game state whenever something mechanically relevant happens (combat, damage, healing, loot, conditions, location changes, etc.). Wrap it exactly like this:
 
@@ -201,7 +245,12 @@ After your narrative, you MUST include a JSON block to update game state wheneve
   "deathSaveResult": { "roll": 14 },
   "restType": "short",
   "hitDiceUsed": 2,
-  "audio": { "ambient": "dungeon", "music": "tension", "sfx": ["door_creak"] }
+  "audio": { "ambient": "dungeon", "music": "tension", "sfx": ["door_creak"] },
+  "locationUpdate": { "name": "Dark Cavern", "type": "dungeon", "description": "A dripping cave entrance.", "terrain": "underground" },
+  "factionMet": { "name": "The Zhentarim", "description": "A shadowy mercantile network", "alignment": "Lawful Evil" },
+  "reputationChange": { "factionName": "The Zhentarim", "change": -5, "reason": "Refused their contract" },
+  "npcInteraction": { "npcName": "Elara", "type": "conversation", "summary": "Discussed the quest", "sentiment": "positive" },
+  "travelStart": { "from": "Waterdeep", "to": "Neverwinter", "terrain": "forest", "dangerLevel": 3 }
 }
 \`\`\`
 
@@ -230,12 +279,19 @@ Always write ALL narrative text, NPC dialogue, and speech block text in English.
 Always write ALL narrative text, NPC dialogue, and speech block text in English. The player may write or speak in other languages — understand their intent fully but ALWAYS respond in English.`,
 }
 
+export interface WorldContext {
+  currentLocation?: { name: string; type: string; description?: string } | null
+  factionReputations?: Array<{ name: string; score: number; tier: string }>
+  discoveredLocations?: string[]
+}
+
 export function buildSystemPrompt(
   campaign: Campaign | null,
   ragContext: string,
   memories: string[],
   activeConditions?: string[],
   ttsLanguage?: string,
+  worldContext?: WorldContext,
 ): string {
   let base = BASE_PROMPT
   if (ttsLanguage && LANGUAGE_SECTIONS[ttsLanguage]) {
@@ -244,13 +300,23 @@ export function buildSystemPrompt(
   const parts = [base]
 
   if (campaign) {
+    const locationLine = worldContext?.currentLocation
+      ? `\nCurrent Location: ${worldContext.currentLocation.name} (${worldContext.currentLocation.type})${worldContext.currentLocation.description ? ' — ' + worldContext.currentLocation.description : ''}`
+      : ''
+    const factionLines = worldContext?.factionReputations?.length
+      ? `\nFaction Standings: ${worldContext.factionReputations.map(f => `${f.name}: ${f.tier} (${f.score}/100)`).join(', ')}`
+      : ''
+    const locationsList = worldContext?.discoveredLocations?.length
+      ? `\nKnown Locations: ${worldContext.discoveredLocations.join(', ')}`
+      : ''
+
     parts.push(`
 [CAMPAIGN CONTEXT]
 Campaign: ${campaign.name}
 Setting: ${campaign.setting || 'Standard fantasy'}
 Character: ${campaign.character_name || 'Unknown'}, Level ${campaign.character_level} ${campaign.character_class || 'Adventurer'}
 Description: ${campaign.description || 'A new adventure begins.'}
-Chaos Factor: ${campaign.chaos_factor ?? 5}/9${activeConditions && activeConditions.length > 0 ? `\nActive Conditions: ${activeConditions.join(', ')}` : ''}
+Chaos Factor: ${campaign.chaos_factor ?? 5}/9${activeConditions && activeConditions.length > 0 ? `\nActive Conditions: ${activeConditions.join(', ')}` : ''}${locationLine}${factionLines}${locationsList}
 [END CAMPAIGN CONTEXT]`)
   }
 

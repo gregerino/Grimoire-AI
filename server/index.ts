@@ -10,6 +10,9 @@ import { oracleRoutes } from './routes/oracle'
 import { npcRoutes } from './routes/npc'
 import { ttsRoutes } from './routes/tts'
 import { imageRoutes } from './routes/image'
+import { locationRoutes } from './routes/location'
+import { factionRoutes } from './routes/faction'
+import { travelRoutes } from './routes/travel'
 
 dotenv.config()
 
@@ -28,6 +31,9 @@ app.use('/api/oracle', oracleRoutes)
 app.use('/api/npc', npcRoutes)
 app.use('/api/tts', ttsRoutes)
 app.use('/api/image', imageRoutes)
+app.use('/api/location', locationRoutes)
+app.use('/api/faction', factionRoutes)
+app.use('/api/travel', travelRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' })

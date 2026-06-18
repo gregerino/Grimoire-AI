@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useParams, Link, useBlocker } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, Send, Loader2, Scroll, Plus, History,
   User, Swords, ScrollText, Package, FileText,
   PanelLeftOpen, PanelLeftClose, Bot, Gauge, Shield,
   Volume2, VolumeX, Square, Pause, Play, Dices, Music,
+  Map, Flag,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCombatStore } from '@/stores/combatStore'
@@ -40,6 +41,8 @@ import { AudioMixer } from '@/components/audio/AudioMixer'
 import { useAudio } from '@/hooks/useAudio'
 import type { AmbientType, MusicMood, SfxType } from '@/stores/audioStore'
 import type { SttLanguage } from '@/hooks/useSpeechRecognition'
+import { WorldMap } from '@/components/world/WorldMap'
+import { ReputationPanel } from '@/components/world/ReputationPanel'
 
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
@@ -48,7 +51,7 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | 'reputation' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
@@ -61,6 +64,7 @@ const panelTabs = [
   { id: 'history' as const, icon: History, label: 'Sessions' },
   { id: 'speech' as const, icon: Volume2, label: 'Röst' },
   { id: 'audio' as const, icon: Music, label: 'Ljud' },
+  { id: 'reputation' as const, icon: Flag, label: 'Factions' },
 ]
 
 export function PlayPage() {
@@ -87,6 +91,7 @@ export function PlayPage() {
   const ttsDisplayLengthRef = useRef(0)
   const [micListening, setMicListening] = useState(false)
   const [readingSession, setReadingSession] = useState<Session | null>(null)
+  const [showMap, setShowMap] = useState(false)
   const sttLang: SttLanguage = ttsLanguage === 'sv' ? 'sv-SE' : 'en-US'
   const { playAmbient, playMusic, playSfx, stopAll: stopAudio, tryUnlock: unlockAudio } = useAudio()
   const autoSavingRef = useRef(false)
@@ -124,22 +129,6 @@ export function PlayPage() {
   useEffect(() => {
     return () => { autoSaveRef.current() }
   }, [])
-
-  // Block React Router navigation to save first
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      currentLocation.pathname !== nextLocation.pathname &&
-      !!currentSession &&
-      messages.length > 0 &&
-      !autoSavingRef.current,
-  )
-
-  useEffect(() => {
-    if (blocker.state !== 'blocked') return
-    autoSaveSession().finally(() => {
-      blocker.proceed()
-    })
-  }, [blocker, autoSaveSession])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -347,7 +336,6 @@ export function PlayPage() {
             })
           }
           setSidebarPanel('combat')
-          setSidebarOpen(true)
         }
 
         if (gameState.combatEnd) combat.endCombat()
@@ -510,6 +498,15 @@ export function PlayPage() {
         </div>
         <div className="flex items-center gap-1.5">
           <button
+            onClick={() => setShowMap(true)}
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-navy hover:text-parchment transition-colors"
+            title="World Map"
+          >
+            <Map className="h-3.5 w-3.5" />
+            <span>Map</span>
+          </button>
+          <div className="h-4 w-px bg-navy" />
+          <button
             onClick={() => {
               const next: AiProvider = aiProvider === 'claude' ? 'openai' : 'claude'
               setAiProvider(next)
@@ -615,8 +612,23 @@ export function PlayPage() {
               {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
               {sidebarPanel === 'speech' && <SpeechSettingsPanel />}
               {sidebarPanel === 'audio' && <AudioMixer />}
+              {sidebarPanel === 'reputation' && <ReputationPanel campaignId={id} />}
             </div>
           </div>
+        )}
+
+        {/* World Map overlay */}
+        {showMap && (
+          <WorldMap
+            campaignId={id}
+            currentLocationId={campaign?.current_location_id ?? null}
+            sessionId={currentSession?.id ?? null}
+            onClose={() => setShowMap(false)}
+            onSendMessage={(msg) => {
+              setShowMap(false)
+              handleSend({ text: msg, displayText: msg })
+            }}
+          />
         )}
 
         {/* Chat area */}
