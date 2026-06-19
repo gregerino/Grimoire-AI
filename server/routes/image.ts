@@ -62,7 +62,7 @@ async function generateAndStore(
   campaignId: string,
   prompt: string,
   imageType: 'npc_portrait' | 'location',
-  size: '1024x1024' | '1792x1024' = '1024x1024',
+  size: '1024x1024' | '1536x1024' = '1024x1024',
 ): Promise<string> {
   const promptHash = hashPrompt(prompt)
 
@@ -70,17 +70,15 @@ async function generateAndStore(
   if (cached) return cached
 
   const response = await openai.images.generate({
-    model: 'dall-e-3',
+    model: 'gpt-image-1',
     prompt,
     n: 1,
     size,
-    quality: 'standard',
-    response_format: 'b64_json',
+    quality: 'low',
   })
 
   const b64 = response.data[0].b64_json
   if (!b64) throw new Error('No image data returned')
-
   const buffer = Buffer.from(b64, 'base64')
   const storagePath = `${campaignId}/${imageType}/${promptHash}.png`
 
@@ -149,14 +147,14 @@ imageRoutes.post('/generate', async (req: Request, res: Response) => {
     }
 
     let prompt: string
-    let size: '1024x1024' | '1792x1024' = '1024x1024'
+    let size: '1024x1024' | '1536x1024' = '1024x1024'
     const imageType = type as 'npc_portrait' | 'location'
 
     if (type === 'npc_portrait') {
       prompt = buildNpcPortraitPrompt(data)
     } else {
       prompt = buildLocationPrompt(data)
-      size = '1792x1024'
+      size = '1536x1024'
     }
 
     const url = await generateAndStore(campaign_id, prompt, imageType, size)
