@@ -72,7 +72,7 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
       return
     }
 
-    const [campaignResult, ragResults, memoriesResult, locationsResult, factionsResult, reputationsResult] = await Promise.all([
+    const [campaignResult, ragResults, memoriesResult, locationsResult, factionsResult, reputationsResult, questsResult] = await Promise.all([
       supabaseAdmin
         .from('campaigns')
         .select('*')
@@ -81,10 +81,10 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
       getRAGContext(message, campaign_id),
       supabaseAdmin
         .from('campaign_memories')
-        .select('content')
+        .select('content, category, importance')
         .eq('campaign_id', campaign_id)
         .order('created_at', { ascending: false })
-        .limit(15),
+        .limit(20),
       supabaseAdmin
         .from('world_locations')
         .select('id, name, type, description, discovered')
@@ -98,11 +98,19 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
         .from('faction_reputation')
         .select('faction_id, score')
         .eq('campaign_id', campaign_id),
+      supabaseAdmin
+        .from('quests')
+        .select('title, status, description')
+        .eq('campaign_id', campaign_id)
+        .in('status', ['rumor', 'active']),
     ])
 
     const campaign = campaignResult.data as Campaign | null
     const memories = (memoriesResult.data || []).map(
-      (m: { content: string }) => m.content,
+      (m: { content: string; category?: string; importance?: string }) => {
+        const prefix = m.category ? `[${m.category}${m.importance === 'high' ? ' ★' : ''}] ` : ''
+        return prefix + m.content
+      },
     )
 
     const locations = locationsResult.data || []
@@ -122,6 +130,8 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
       ? locations.find((l: { id: string }) => l.id === campaign.current_location_id) || null
       : null
 
+    const activeQuests = (questsResult.data || []) as Array<{ title: string; status: string; description: string | null }>
+
     const worldContext: WorldContext = {
       currentLocation: currentLoc ? { name: currentLoc.name, type: currentLoc.type, description: currentLoc.description } : null,
       factionReputations: factions.map((f: { id: string; name: string }) => {
@@ -130,6 +140,7 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
         return { name: f.name, score, tier: tierFromScore(score) }
       }),
       discoveredLocations: locations.map((l: { name: string }) => l.name),
+      activeQuests: activeQuests.map((q) => ({ title: q.title, status: q.status, description: q.description })),
     }
 
     const provider: AiProvider =
@@ -256,6 +267,15 @@ interface GameState {
     title: string
     status: string
     description?: string
+    sourceNpcName?: string
+    targetLocationName?: string
+    reward?: {
+      gp?: number
+      items?: string[]
+      reputation?: { factionName: string; change: number }
+      narrative?: string
+    }
+    update?: string
   } | null
   combatStart?: {
     enemies: Array<{
@@ -375,10 +395,18 @@ async function processGameState(
   }
 
   if (gs.memoryUpdate) {
+    const memoryCategory = gs.memoryUpdate.startsWith('[')
+      ? gs.memoryUpdate.match(/^\[(plot|npc|world|character|item)\]/i)?.[1]?.toLowerCase() || 'plot'
+      : 'plot'
+    const memoryContent = gs.memoryUpdate.replace(/^\[(plot|npc|world|character|item)\]\s*/i, '')
+
     await supabaseAdmin.from('campaign_memories').insert({
       campaign_id: campaignId,
       session_id: sessionId || null,
-      content: gs.memoryUpdate,
+      content: memoryContent,
+      category: memoryCategory,
+      importance: 'medium',
+      source: 'ai',
     })
   }
 
@@ -399,22 +427,90 @@ async function processGameState(
   if (gs.questUpdate) {
     const { data: existing } = await supabaseAdmin
       .from('quests')
-      .select('id')
+      .select('id, updates, status')
       .eq('campaign_id', campaignId)
       .eq('title', gs.questUpdate.title)
       .single()
 
+    let sourceNpcId: string | null = null
+    if (gs.questUpdate.sourceNpcName) {
+      const { data: npc } = await supabaseAdmin
+        .from('npcs')
+        .select('id')
+        .eq('campaign_id', campaignId)
+        .eq('name', gs.questUpdate.sourceNpcName)
+        .single()
+      sourceNpcId = npc?.id ?? null
+    }
+
+    let targetLocationId: string | null = null
+    if (gs.questUpdate.targetLocationName) {
+      const { data: loc } = await supabaseAdmin
+        .from('world_locations')
+        .select('id')
+        .eq('campaign_id', campaignId)
+        .eq('name', gs.questUpdate.targetLocationName)
+        .single()
+      targetLocationId = loc?.id ?? null
+    }
+
+    let reward = null
+    if (gs.questUpdate.reward) {
+      const r = gs.questUpdate.reward
+      let repData = null
+      if (r.reputation) {
+        const { data: faction } = await supabaseAdmin
+          .from('factions')
+          .select('id')
+          .eq('campaign_id', campaignId)
+          .eq('name', r.reputation.factionName)
+          .single()
+        if (faction) repData = { factionId: faction.id, change: r.reputation.change }
+      }
+      reward = {
+        ...(r.gp != null && { gp: r.gp }),
+        ...(r.items && { items: r.items }),
+        ...(repData && { reputation: repData }),
+        ...(r.narrative && { narrative: r.narrative }),
+      }
+    }
+
     if (existing) {
+      const prevUpdates = (existing.updates as Array<{ timestamp: string; text: string }>) || []
+      const newUpdate = gs.questUpdate.update
+        ? [...prevUpdates, { timestamp: new Date().toISOString(), text: gs.questUpdate.update }]
+        : prevUpdates
+
+      const questPatch: Record<string, unknown> = {
+        status: gs.questUpdate.status,
+        updates: newUpdate,
+      }
+      if (gs.questUpdate.description) questPatch.description = gs.questUpdate.description
+      if (sourceNpcId) questPatch.source_npc_id = sourceNpcId
+      if (targetLocationId) questPatch.target_location_id = targetLocationId
+      if (reward && Object.keys(reward).length > 0) questPatch.reward = reward
+      if (gs.questUpdate.status === 'completed' || gs.questUpdate.status === 'failed') {
+        questPatch.completed_at = new Date().toISOString()
+      }
+
       await supabaseAdmin
         .from('quests')
-        .update({ status: gs.questUpdate.status })
+        .update(questPatch)
         .eq('id', existing.id)
     } else {
+      const initialUpdates = gs.questUpdate.update
+        ? [{ timestamp: new Date().toISOString(), text: gs.questUpdate.update }]
+        : []
+
       await supabaseAdmin.from('quests').insert({
         campaign_id: campaignId,
         title: gs.questUpdate.title,
         description: gs.questUpdate.description || null,
-        status: gs.questUpdate.status || 'active',
+        status: gs.questUpdate.status || 'rumor',
+        source_npc_id: sourceNpcId,
+        target_location_id: targetLocationId,
+        reward: reward && Object.keys(reward).length > 0 ? reward : null,
+        updates: initialUpdates,
       })
     }
   }

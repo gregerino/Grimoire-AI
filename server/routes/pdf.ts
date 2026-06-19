@@ -6,7 +6,7 @@ import { embedAndStore } from '../services/embedder'
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: 400 * 1024 * 1024 }, // 400MB for large rulebooks
   fileFilter: (_req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
       cb(null, true)
@@ -22,7 +22,18 @@ export const pdfRoutes = Router()
 // Uploads PDF to Supabase Storage, parses it, chunks it, and embeds it.
 pdfRoutes.post(
   '/upload',
-  upload.single('file'),
+  (req: Request, res: Response, next) => {
+    upload.single('file')(req, res, (err) => {
+      if (err) {
+        const msg = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
+          ? 'File too large (max 400MB)'
+          : err.message || 'Upload error'
+        res.status(413).json({ error: msg })
+        return
+      }
+      next()
+    })
+  },
   async (req: Request, res: Response): Promise<void> => {
     try {
       const file = req.file
@@ -36,7 +47,8 @@ pdfRoutes.post(
 
       const storagePath = `${userId}/${campaignId}/${Date.now()}-${file.originalname}`
 
-      // 1. Upload to Supabase Storage
+      // 1. Try uploading to Supabase Storage (skip if file too large for plan)
+      let storageUploaded = false
       const { error: storageError } = await supabaseAdmin.storage
         .from('pdfs')
         .upload(storagePath, file.buffer, {
@@ -44,8 +56,9 @@ pdfRoutes.post(
         })
 
       if (storageError) {
-        res.status(500).json({ error: `Storage upload failed: ${storageError.message}` })
-        return
+        console.warn(`Storage upload skipped for ${file.originalname}: ${storageError.message}`)
+      } else {
+        storageUploaded = true
       }
 
       // 2. Create PDF record with status "processing"
@@ -55,7 +68,7 @@ pdfRoutes.post(
           user_id: userId,
           campaign_id: campaignId,
           filename: file.originalname,
-          storage_path: storagePath,
+          storage_path: storageUploaded ? storagePath : `local-only/${file.originalname}`,
           status: 'processing',
         })
         .select()
@@ -67,7 +80,10 @@ pdfRoutes.post(
       }
 
       // Return immediately — processing happens in background
-      res.json({ pdf: pdfRecord, message: 'Upload started, processing in background' })
+      const msg = storageUploaded
+        ? 'Upload started, processing in background'
+        : 'File too large for storage — indexing directly (RAG will work, but PDF is not stored)'
+      res.json({ pdf: pdfRecord, message: msg })
 
       // 3. Parse, chunk, embed in background
       processInBackground(pdfRecord.id, file.buffer, file.originalname, campaignId)

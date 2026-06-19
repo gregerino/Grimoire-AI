@@ -13,6 +13,8 @@ import { imageRoutes } from './routes/image'
 import { locationRoutes } from './routes/location'
 import { factionRoutes } from './routes/faction'
 import { travelRoutes } from './routes/travel'
+import { memoryRoutes } from './routes/memory'
+import { tavernRoutes } from './routes/tavern'
 
 dotenv.config()
 
@@ -34,9 +36,17 @@ app.use('/api/image', imageRoutes)
 app.use('/api/location', locationRoutes)
 app.use('/api/faction', factionRoutes)
 app.use('/api/travel', travelRoutes)
+app.use('/api/memory', memoryRoutes)
+app.use('/api/tavern', tavernRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' })
+})
+
+// Catch-all error handler — always return JSON, never HTML
+app.use((err: Error, _req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
+  console.error('Unhandled error:', err.message)
+  res.status(500).json({ error: err.message || 'Internal server error' })
 })
 
 app.listen(PORT, () => {

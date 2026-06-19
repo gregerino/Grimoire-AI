@@ -56,15 +56,45 @@ export interface Npc {
   created_at: string
 }
 
+export interface QuestReward {
+  gp?: number
+  items?: string[]
+  reputation?: { factionId: string; change: number }
+  narrative?: string
+}
+
+export interface QuestUpdate {
+  timestamp: string
+  text: string
+}
+
 export interface Quest {
   id: string
   campaign_id: string
   title: string
   description: string | null
-  status: 'active' | 'completed' | 'failed' | 'abandoned'
+  status: 'rumor' | 'active' | 'completed' | 'failed'
   priority: 'main' | 'side' | 'personal'
+  source_npc_id: string | null
+  target_location_id: string | null
+  reward: QuestReward | null
+  updates: QuestUpdate[]
   created_at: string
+  completed_at: string | null
   updated_at: string
+}
+
+export type MemoryCategory = 'plot' | 'npc' | 'world' | 'character' | 'item'
+export type MemoryImportance = 'high' | 'medium' | 'low'
+
+export interface MemoryEntry {
+  id: string
+  campaign_id: string
+  category: MemoryCategory
+  content: string
+  importance: MemoryImportance
+  source: 'ai' | 'user'
+  created_at: string
 }
 
 export interface Note {

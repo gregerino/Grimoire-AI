@@ -5,7 +5,7 @@ import {
   User, Swords, ScrollText, Package, FileText,
   PanelLeftOpen, PanelLeftClose, Bot, Gauge, Shield,
   Volume2, VolumeX, Square, Pause, Play, Dices, Music,
-  Map, Flag,
+  Map, Flag, Brain,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCombatStore } from '@/stores/combatStore'
@@ -43,6 +43,7 @@ import type { AmbientType, MusicMood, SfxType } from '@/stores/audioStore'
 import type { SttLanguage } from '@/hooks/useSpeechRecognition'
 import { WorldMap } from '@/components/world/WorldMap'
 import { ReputationPanel } from '@/components/world/ReputationPanel'
+import { MemoryTab } from '@/components/campaign/tabs/MemoryTab'
 
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
@@ -51,7 +52,7 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | 'reputation' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | 'reputation' | 'memory' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
@@ -65,6 +66,7 @@ const panelTabs = [
   { id: 'speech' as const, icon: Volume2, label: 'Röst' },
   { id: 'audio' as const, icon: Music, label: 'Ljud' },
   { id: 'reputation' as const, icon: Flag, label: 'Factions' },
+  { id: 'memory' as const, icon: Brain, label: 'Memory' },
 ]
 
 export function PlayPage() {
@@ -578,7 +580,7 @@ export function PlayPage() {
         {sidebarPanel && (
           <div className="flex w-80 shrink-0 flex-col border-r border-navy bg-dark-navy/30">
             {/* Sidebar tab bar */}
-            <div className="flex border-b border-navy">
+            <div className="flex overflow-x-auto border-b border-navy scrollbar-hide">
               {panelTabs.map((tab) => (
                 <SidebarTabButton
                   key={tab.id}
@@ -612,6 +614,7 @@ export function PlayPage() {
               {sidebarPanel === 'speech' && <SpeechSettingsPanel />}
               {sidebarPanel === 'audio' && <AudioMixer />}
               {sidebarPanel === 'reputation' && <ReputationPanel campaignId={id} />}
+              {sidebarPanel === 'memory' && <MemoryTab campaignId={id} />}
             </div>
           </div>
         )}
@@ -783,7 +786,7 @@ function SidebarTabButton({
   return (
     <button
       onClick={onToggle}
-      className={`relative flex flex-1 items-center justify-center p-2 transition-colors ${
+      className={`relative flex shrink-0 items-center justify-center p-2 px-2.5 transition-colors ${
         isActive
           ? 'border-b-2 border-gold text-gold'
           : showDot

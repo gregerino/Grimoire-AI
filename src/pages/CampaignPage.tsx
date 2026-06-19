@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen } from 'lucide-react'
+import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen, Brain } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { supabase } from '@/lib/supabase'
@@ -9,6 +9,7 @@ import { NpcTab } from '@/components/campaign/tabs/NpcTab'
 import { QuestTab } from '@/components/campaign/tabs/QuestTab'
 import { InventoryTab } from '@/components/campaign/tabs/InventoryTab'
 import { PdfLibrary } from '@/components/pdf/PdfLibrary'
+import { MemoryTab } from '@/components/campaign/tabs/MemoryTab'
 import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SessionHistory } from '@/components/session/SessionHistory'
@@ -16,7 +17,7 @@ import { SessionReader } from '@/components/session/SessionReader'
 import { listSessions } from '@/lib/api'
 import type { Campaign, Session } from '@/types/database'
 
-type Tab = 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'sessions'
+type Tab = 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'sessions' | 'memory'
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'overview', label: 'Overview', icon: <User className="h-4 w-4" /> },
@@ -24,6 +25,7 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'npcs', label: 'NPCs', icon: <Swords className="h-4 w-4" /> },
   { id: 'quests', label: 'Quests', icon: <ScrollText className="h-4 w-4" /> },
   { id: 'inventory', label: 'Inventory', icon: <Package className="h-4 w-4" /> },
+  { id: 'memory', label: 'DM Memory', icon: <Brain className="h-4 w-4" /> },
   { id: 'library', label: 'PDF Library', icon: <FileText className="h-4 w-4" /> },
 ]
 
@@ -160,6 +162,7 @@ export function CampaignPage() {
             onReadSession={(s) => setReadingSession(s)}
           />
         )}
+        {activeTab === 'memory' && <MemoryTab campaignId={id} />}
         {activeTab === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
       </div>
 

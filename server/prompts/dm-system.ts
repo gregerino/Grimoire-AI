@@ -260,7 +260,16 @@ Rules for the gamestate block:
 - memoryUpdate: one sentence summarising the most important thing that happened (for long-term campaign memory)
 - chaosFactor: the CHANGE (+1, -1, or 0), not the absolute value
 - npcMet: { "name": "...", "race": "...", "disposition": "friendly|neutral|hostile", "description": "..." } or null
-- questUpdate: { "title": "...", "status": "active|completed|failed", "description": "..." } or null
+- questUpdate: { "title": "...", "status": "rumor|active|completed|failed", "description": "...", "sourceNpcName": "...", "targetLocationName": "...", "reward": { "gp": 100, "items": ["Enchanted Ring"], "reputation": { "factionName": "The Harpers", "change": 10 }, "narrative": "..." }, "update": "One sentence describing what changed" } or null
+
+# Quest & Rumor System
+Quests follow a natural lifecycle: rumor → active → completed/failed.
+- When an NPC mentions something intriguing, a missing person, strange happenings, or an opportunity, create a RUMOR: questUpdate with status "rumor". Rumors are whispers and hints, not formal quests yet.
+- When the player investigates or accepts a rumor, upgrade it to ACTIVE: questUpdate with the same title and status "active".
+- Include "sourceNpcName" to link which NPC gave the quest, and "targetLocationName" if there's a destination.
+- Include "update" with a brief one-sentence log entry each time something changes about the quest.
+- When complete, include "reward" with appropriate gold, items, reputation changes, and/or a narrative reward description.
+- Make rumors feel organic — NPCs drop hints in conversation, tavern patrons whisper about dangers, notice boards have postings.
 - lootFound: [{ "name": "...", "category": "weapon|armor|potion|scroll|gear|treasure|other", "description": "..." }]
 - CRITICAL: When combat begins, you MUST include combatStart with enemies array and playerInitiative. The app's combat tracker depends on this — without it, combat UI won't activate.
 - Do NOT include the gamestate block for purely conversational responses
@@ -283,6 +292,7 @@ export interface WorldContext {
   currentLocation?: { name: string; type: string; description?: string } | null
   factionReputations?: Array<{ name: string; score: number; tier: string }>
   discoveredLocations?: string[]
+  activeQuests?: Array<{ title: string; status: string; description: string | null }>
 }
 
 export function buildSystemPrompt(
@@ -309,6 +319,9 @@ export function buildSystemPrompt(
     const locationsList = worldContext?.discoveredLocations?.length
       ? `\nKnown Locations: ${worldContext.discoveredLocations.join(', ')}`
       : ''
+    const questLines = worldContext?.activeQuests?.length
+      ? `\nActive Quests & Rumors:\n${worldContext.activeQuests.map(q => `  - [${q.status}] ${q.title}${q.description ? ': ' + q.description : ''}`).join('\n')}`
+      : ''
 
     parts.push(`
 [CAMPAIGN CONTEXT]
@@ -316,7 +329,7 @@ Campaign: ${campaign.name}
 Setting: ${campaign.setting || 'Standard fantasy'}
 Character: ${campaign.character_name || 'Unknown'}, Level ${campaign.character_level} ${campaign.character_class || 'Adventurer'}
 Description: ${campaign.description || 'A new adventure begins.'}
-Chaos Factor: ${campaign.chaos_factor ?? 5}/9${activeConditions && activeConditions.length > 0 ? `\nActive Conditions: ${activeConditions.join(', ')}` : ''}${locationLine}${factionLines}${locationsList}
+Chaos Factor: ${campaign.chaos_factor ?? 5}/9${activeConditions && activeConditions.length > 0 ? `\nActive Conditions: ${activeConditions.join(', ')}` : ''}${locationLine}${factionLines}${locationsList}${questLines}
 [END CAMPAIGN CONTEXT]`)
   }
 

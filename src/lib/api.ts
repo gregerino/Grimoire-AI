@@ -66,8 +66,14 @@ export async function uploadPdf(
   })
 
   if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.error || 'Upload failed')
+    const text = await res.text()
+    let msg = 'Upload failed'
+    try {
+      msg = JSON.parse(text).error || msg
+    } catch {
+      msg = text.startsWith('<') ? `Server returned HTML (status ${res.status}) — is the backend running on ${API_BASE}?` : text
+    }
+    throw new Error(msg)
   }
 
   return res.json()
@@ -120,7 +126,20 @@ export interface GameState {
   locationChange?: string
   chaosFactor?: number
   npcMet?: { name: string; race?: string; disposition: string; description?: string } | null
-  questUpdate?: { title: string; status: string; description?: string } | null
+  questUpdate?: {
+    title: string
+    status: string
+    description?: string
+    sourceNpcName?: string
+    targetLocationName?: string
+    reward?: {
+      gp?: number
+      items?: string[]
+      reputation?: { factionName: string; change: number }
+      narrative?: string
+    }
+    update?: string
+  } | null
   combatStart?: {
     enemies: Array<{
       name: string
@@ -359,6 +378,39 @@ export function startTravel(campaignId: string, fromId: string, toId: string, se
       to_id: toId,
       session_id: sessionId || null,
     }),
+  })
+}
+
+// --- Memory ---
+
+export function listMemories(campaignId: string) {
+  return jsonFetch(`${API_BASE}/memory/list/${campaignId}`)
+}
+
+export function createMemory(data: Record<string, unknown>) {
+  return jsonFetch(`${API_BASE}/memory`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function updateMemory(id: string, updates: Record<string, unknown>) {
+  return jsonFetch(`${API_BASE}/memory/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+}
+
+export function deleteMemory(id: string) {
+  return jsonFetch(`${API_BASE}/memory/${id}`, { method: 'DELETE' })
+}
+
+// --- Tavern ---
+
+export function generateTavern(campaignId: string, regionName?: string) {
+  return jsonFetch(`${API_BASE}/tavern/generate`, {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId, region_name: regionName }),
   })
 }
 

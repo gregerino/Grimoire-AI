@@ -33,3 +33,11 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-gold-dim);
 }
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
