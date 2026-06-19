@@ -11,6 +11,7 @@ interface QueueItem {
   text: string
   speaker: VoiceProfileKey
   voiceId: string | null
+  prefetched?: Promise<Blob>
 }
 
 export function useSpeech() {
@@ -33,6 +34,13 @@ export function useSpeech() {
     }
   }, [])
 
+  const prefetchNext = () => {
+    const next = queueRef.current[0]
+    if (next && !next.prefetched) {
+      next.prefetched = fetchTtsAudio(next.text, next.speaker, next.voiceId)
+    }
+  }
+
   const processQueue = useCallback(async () => {
     if (activeRef.current || stoppedRef.current) return
     const item = queueRef.current.shift()
@@ -46,11 +54,14 @@ export function useSpeech() {
     setPaused(false)
 
     try {
-      const blob = await fetchTtsAudio(item.text, item.speaker, item.voiceId)
+      const blob = await (item.prefetched || fetchTtsAudio(item.text, item.speaker, item.voiceId))
       if (stoppedRef.current) {
         activeRef.current = false
         return
       }
+
+      // Start fetching the next chunk while this one plays
+      prefetchNext()
 
       const url = URL.createObjectURL(blob)
       objectUrlRef.current = url

@@ -44,7 +44,7 @@ export function SpeechSettingsPanel() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-parchment">Röst (ElevenLabs)</span>
+        <span className="text-xs font-medium text-parchment">Röst (Inworld)</span>
         <button
           onClick={() => setEnabled(!enabled)}
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors ${
@@ -96,7 +96,7 @@ export function SpeechSettingsPanel() {
                   onChange={(e) => setDefaultVoiceId(e.target.value || null)}
                   className="w-full rounded border border-navy bg-dark-navy px-2 py-1.5 text-xs text-parchment focus:border-gold/50 focus:outline-none"
                 >
-                  <option value="">George — Warm Storyteller (standard)</option>
+                  <option value="">Sarah (standard)</option>
                   {voices.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.name} {v.description ? `— ${v.description}` : ''}
