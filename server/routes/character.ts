@@ -1,39 +1,8 @@
 import { Router, Request, Response } from 'express'
-import multer from 'multer'
-import { parseCharacterPdfFromBuffer } from '../services/character-parser'
+import { extractCharacterId, fetchDndbCharacter } from '../services/dndbeyond-sync'
 import { supabaseAdmin } from '../lib/supabase-admin'
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'application/pdf') cb(null, true)
-    else cb(new Error('Only PDF files are allowed'))
-  },
-})
-
 export const characterRoutes = Router()
-
-// POST /api/character/parse — upload a DnD Beyond PDF, get structured data back
-characterRoutes.post(
-  '/parse',
-  upload.single('file'),
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const file = req.file
-      if (!file) {
-        res.status(400).json({ error: 'No file uploaded' })
-        return
-      }
-
-      const { sheet, fields } = await parseCharacterPdfFromBuffer(file.buffer)
-      res.json({ character: sheet, fieldCount: Object.keys(fields).length })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to parse character PDF'
-      res.status(500).json({ error: message })
-    }
-  },
-)
 
 // POST /api/character/save — save parsed character sheet to campaign
 characterRoutes.post('/save', async (req: Request, res: Response): Promise<void> => {
@@ -170,6 +139,57 @@ characterRoutes.patch('/:campaignId/rest', async (req: Request, res: Response): 
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to perform rest'
+    res.status(500).json({ error: message })
+  }
+})
+
+// POST /api/character/sync-dndb — fetch character from D&D Beyond
+characterRoutes.post('/sync-dndb', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { url, campaign_id } = req.body
+    if (!url || !campaign_id) {
+      res.status(400).json({ error: 'Missing url or campaign_id' })
+      return
+    }
+
+    const characterId = extractCharacterId(url)
+    if (!characterId) {
+      res.status(400).json({ error: 'Invalid D&D Beyond character URL. Expected format: dndbeyond.com/characters/12345' })
+      return
+    }
+
+    const character = await fetchDndbCharacter(characterId)
+
+    const { error } = await supabaseAdmin
+      .from('character_sheets')
+      .upsert(
+        {
+          campaign_id,
+          data: { ...character, dndbeyondId: characterId },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'campaign_id' },
+      )
+
+    if (error) {
+      res.status(500).json({ error: error.message })
+      return
+    }
+
+    await supabaseAdmin
+      .from('campaigns')
+      .update({
+        character_name: character.name,
+        character_class: character.class,
+        character_level: character.level,
+        current_hp: character.hp.current,
+        max_hp: character.hp.max,
+      })
+      .eq('id', campaign_id)
+
+    res.json({ character: { ...character, dndbeyondId: characterId }, synced: true })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to sync from D&D Beyond'
     res.status(500).json({ error: message })
   }
 })

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen, Brain } from 'lucide-react'
+import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen, Brain, Shield } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { supabase } from '@/lib/supabase'
@@ -10,6 +10,7 @@ import { QuestTab } from '@/components/campaign/tabs/QuestTab'
 import { InventoryTab } from '@/components/campaign/tabs/InventoryTab'
 import { PdfLibrary } from '@/components/pdf/PdfLibrary'
 import { MemoryTab } from '@/components/campaign/tabs/MemoryTab'
+import { CharacterPanel } from '@/components/character/CharacterPanel'
 import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SessionHistory } from '@/components/session/SessionHistory'
@@ -17,10 +18,11 @@ import { SessionReader } from '@/components/session/SessionReader'
 import { listSessions } from '@/lib/api'
 import type { Campaign, Session } from '@/types/database'
 
-type Tab = 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'sessions' | 'memory'
+type Tab = 'overview' | 'character' | 'npcs' | 'quests' | 'inventory' | 'library' | 'sessions' | 'memory'
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'overview', label: 'Overview', icon: <User className="h-4 w-4" /> },
+  { id: 'character', label: 'Character', icon: <Shield className="h-4 w-4" /> },
   { id: 'sessions', label: 'Sessions', icon: <BookOpen className="h-4 w-4" /> },
   { id: 'npcs', label: 'NPCs', icon: <Swords className="h-4 w-4" /> },
   { id: 'quests', label: 'Quests', icon: <ScrollText className="h-4 w-4" /> },
@@ -152,6 +154,7 @@ export function CampaignPage() {
       {/* Tab content */}
       <div className="rounded-xl border border-navy bg-dark-navy p-6">
         {activeTab === 'overview' && <OverviewTab campaign={campaign} />}
+        {activeTab === 'character' && <CharacterPanel campaignId={id} />}
         {activeTab === 'npcs' && <NpcTab campaignId={id} />}
         {activeTab === 'quests' && <QuestTab campaignId={id} />}
         {activeTab === 'inventory' && <InventoryTab campaignId={id} />}

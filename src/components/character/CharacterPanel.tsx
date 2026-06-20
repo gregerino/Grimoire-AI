@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  Heart, Shield, Footprints, Upload, Loader2,
+  Heart, Shield, Footprints, Loader2,
   Sword, BookOpen, Star, Backpack, ChevronDown, ChevronUp,
-  Moon, AlertCircle, Crosshair,
+  Moon, AlertCircle, Crosshair, RefreshCw, Link, ExternalLink,
+  Minimize2, Maximize2, X, GripHorizontal,
 } from 'lucide-react'
-import { getCharacterSheet, parseCharacterPdf, saveCharacterSheet } from '@/lib/api'
+import { getCharacterSheet, saveCharacterSheet, syncCharacterFromDndb } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { ConditionBadge } from '@/components/combat/ConditionBadge'
 import { RestDialog } from '@/components/combat/RestDialog'
@@ -31,6 +32,7 @@ interface CharacterSheet {
   currencies: { gp: number; sp: number; cp: number; ep: number; pp: number }
   hitDice?: { current: number; max: number }
   activeConditions?: Condition[]
+  dndbeyondId?: string
 }
 
 interface Props {
@@ -47,7 +49,10 @@ function mod(score: number): string {
 export function CharacterPanel({ campaignId }: Props) {
   const [character, setCharacter] = useState<CharacterSheet | null>(null)
   const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [dndbUrl, setDndbUrl] = useState('')
+  const [showDndbInput, setShowDndbInput] = useState(false)
+  const [showDndbSheet, setShowDndbSheet] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [showRestDialog, setShowRestDialog] = useState(false)
@@ -82,21 +87,21 @@ export function CharacterPanel({ campaignId }: Props) {
     }
   }, [fetchCharacter, campaignId])
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
+  const handleDndbSync = async (urlOverride?: string) => {
+    const url = urlOverride || dndbUrl.trim()
+    if (!url && !character?.dndbeyondId) return
+    setSyncing(true)
     setError(null)
-
     try {
-      const { character: parsed } = await parseCharacterPdf(file)
-      await saveCharacterSheet(campaignId, parsed)
-      setCharacter(parsed)
+      const syncUrl = url || character!.dndbeyondId!
+      const { character: synced } = await syncCharacterFromDndb(campaignId, syncUrl)
+      setCharacter(synced)
+      setShowDndbInput(false)
+      setDndbUrl('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse character sheet')
+      setError(err instanceof Error ? err.message : 'Failed to sync from D&D Beyond')
     }
-    setUploading(false)
-    e.target.value = ''
+    setSyncing(false)
   }
 
   const toggle = (section: string) => {
@@ -117,17 +122,40 @@ export function CharacterPanel({ campaignId }: Props) {
         <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500">
           Character Sheet
         </h3>
-        <div className="rounded-xl border border-dashed border-navy bg-dark-navy/50 p-6 text-center">
-          <Upload className="mx-auto mb-3 h-8 w-8 text-gray-600" />
-          <p className="mb-3 text-sm text-gray-500">
-            Upload a DnD Beyond character PDF to import your character sheet.
+        <div className="rounded-xl border border-dashed border-navy bg-dark-navy/50 p-5 text-center">
+          <Link className="mx-auto mb-3 h-8 w-8 text-gold/40" />
+          <p className="mb-1 text-sm font-medium text-parchment/80">
+            Connect your D&D Beyond character
           </p>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gold/20 border border-gold/30 px-4 py-2 text-sm text-gold transition-colors hover:bg-gold/30">
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {uploading ? 'Parsing...' : 'Upload PDF'}
-            <input type="file" accept=".pdf" onChange={handleUpload} className="hidden" />
-          </label>
-          {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+          <p className="mb-4 text-xs text-gray-500">
+            Paste your character URL to sync stats, spells, equipment and more.
+          </p>
+
+          <div className="mb-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="dndbeyond.com/characters/12345"
+                value={dndbUrl}
+                onChange={(e) => setDndbUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleDndbSync()}
+                className="flex-1 rounded-lg border border-navy bg-dark-navy px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/50"
+              />
+              <button
+                onClick={() => handleDndbSync()}
+                disabled={syncing || !dndbUrl.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-gold/20 border border-gold/30 px-3 py-2 text-sm text-gold transition-colors hover:bg-gold/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                {syncing ? 'Syncing...' : 'Sync'}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-gray-600">
+              Character must be set to &quot;Public&quot; in D&D Beyond
+            </p>
+          </div>
+
+          {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
         </div>
       </div>
     )
@@ -157,12 +185,55 @@ export function CharacterPanel({ campaignId }: Props) {
           >
             <Moon className="h-3.5 w-3.5" />
           </button>
-          <label className="cursor-pointer rounded p-1 text-gray-600 transition-colors hover:text-gold">
-            <Upload className="h-3.5 w-3.5" />
-            <input type="file" accept=".pdf" onChange={handleUpload} className="hidden" />
-          </label>
+          {character?.dndbeyondId && (
+            <button
+              onClick={() => setShowDndbSheet(true)}
+              className="rounded p-1 text-gray-600 transition-colors hover:text-gold"
+              title="View D&D Beyond character sheet"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={() => {
+              if (character?.dndbeyondId) {
+                handleDndbSync(character.dndbeyondId)
+              } else {
+                setShowDndbInput((v) => !v)
+              }
+            }}
+            disabled={syncing}
+            className={`rounded p-1 transition-colors ${showDndbInput ? 'text-gold' : 'text-gray-600 hover:text-gold'} disabled:opacity-50`}
+            title={character?.dndbeyondId ? 'Re-sync from D&D Beyond' : 'Sync from D&D Beyond'}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
+
+      {/* D&D Beyond sync bar */}
+      {showDndbInput && (
+        <div className="rounded-xl border border-gold/20 bg-dark-navy p-2">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="dndbeyond.com/characters/12345"
+              value={dndbUrl}
+              onChange={(e) => setDndbUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleDndbSync()}
+              className="flex-1 rounded-lg border border-navy bg-navy/50 px-2 py-1 text-xs text-parchment placeholder-gray-600 outline-none focus:border-gold/50"
+            />
+            <button
+              onClick={() => handleDndbSync()}
+              disabled={syncing || !dndbUrl.trim()}
+              className="rounded-lg bg-gold/20 px-2 py-1 text-xs text-gold transition-colors hover:bg-gold/30 disabled:opacity-50"
+            >
+              {syncing ? 'Syncing...' : 'Sync'}
+            </button>
+          </div>
+          {error && <p className="mt-1 text-[10px] text-red-400">{error}</p>}
+        </div>
+      )}
 
       {/* Name & Class */}
       <div className="rounded-xl border border-navy bg-dark-navy p-3">
@@ -383,6 +454,15 @@ export function CharacterPanel({ campaignId }: Props) {
           onComplete={fetchCharacter}
         />
       )}
+
+      {/* D&D Beyond Floating Window */}
+      {showDndbSheet && character?.dndbeyondId && (
+        <DndbFloatingWindow
+          characterId={character.dndbeyondId}
+          characterName={character.name}
+          onClose={() => setShowDndbSheet(false)}
+        />
+      )}
     </div>
   )
 }
@@ -424,6 +504,165 @@ function CurrencyBadge({ label, value, color }: { label: string; value: number; 
     <div className="text-center">
       <div className={`text-sm font-bold ${color}`}>{value}</div>
       <div className="text-[10px] text-gray-600">{label}</div>
+    </div>
+  )
+}
+
+const DEFAULT_SIZE = { w: 700, h: 500 }
+const MIN_SIZE = { w: 320, h: 200 }
+const MINIMIZED_H = 40
+const STORAGE_KEY = 'grimoire-dndb-window'
+
+function loadWindowState(): { w: number; h: number; x: number; y: number } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed.w >= MIN_SIZE.w && parsed.h >= MIN_SIZE.h) return parsed
+  } catch { /* ignore */ }
+  return null
+}
+
+function saveWindowState(x: number, y: number, w: number, h: number) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y, w, h }))
+}
+
+function DndbFloatingWindow({
+  characterId,
+  characterName,
+  onClose,
+}: {
+  characterId: string
+  characterName: string
+  onClose: () => void
+}) {
+  const [minimized, setMinimized] = useState(false)
+  const [size, setSize] = useState(() => {
+    const saved = loadWindowState()
+    return saved ? { w: saved.w, h: saved.h } : DEFAULT_SIZE
+  })
+  const [pos, setPos] = useState(() => {
+    const saved = loadWindowState()
+    if (saved) return { x: saved.x, y: saved.y }
+    return {
+      x: Math.max(0, Math.floor((window.innerWidth - DEFAULT_SIZE.w) / 2)),
+      y: Math.max(0, Math.floor((window.innerHeight - DEFAULT_SIZE.h) / 2)),
+    }
+  })
+
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const resizeRef = useRef<{ startX: number; startY: number; origW: number; origH: number } | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  const setPointerCapture = (e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  const onDragStart = (e: React.PointerEvent) => {
+    e.preventDefault()
+    setPointerCapture(e)
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y }
+  }
+
+  const onDragMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    setPos({
+      x: Math.max(0, Math.min(window.innerWidth - 100, dragRef.current.origX + dx)),
+      y: Math.max(0, Math.min(window.innerHeight - 40, dragRef.current.origY + dy)),
+    })
+  }
+
+  const onDragEnd = () => {
+    if (dragRef.current) saveWindowState(pos.x, pos.y, size.w, size.h)
+    dragRef.current = null
+  }
+
+  const onResizeStart = (e: React.PointerEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setPointerCapture(e)
+    resizeRef.current = { startX: e.clientX, startY: e.clientY, origW: size.w, origH: size.h }
+  }
+
+  const onResizeMove = (e: React.PointerEvent) => {
+    if (!resizeRef.current) return
+    const dx = e.clientX - resizeRef.current.startX
+    const dy = e.clientY - resizeRef.current.startY
+    setSize({
+      w: Math.max(MIN_SIZE.w, resizeRef.current.origW + dx),
+      h: Math.max(MIN_SIZE.h, resizeRef.current.origH + dy),
+    })
+  }
+
+  const onResizeEnd = () => {
+    if (resizeRef.current) saveWindowState(pos.x, pos.y, size.w, size.h)
+    resizeRef.current = null
+  }
+
+  const currentH = minimized ? MINIMIZED_H : size.h
+
+  return (
+    <div
+      className="fixed z-50 flex flex-col rounded-xl border border-navy bg-dark-navy shadow-2xl"
+      style={{ left: pos.x, top: pos.y, width: size.w, height: currentH }}
+    >
+      {/* Title bar — draggable */}
+      <div
+        className="flex shrink-0 cursor-move items-center justify-between rounded-t-xl border-b border-navy bg-navy/50 px-3 py-2 select-none"
+        onPointerDown={onDragStart}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+      >
+        <div className="flex items-center gap-2 pointer-events-none">
+          <GripHorizontal className="h-3.5 w-3.5 text-gray-600" />
+          <span className="text-xs font-medium text-parchment truncate">
+            D&D Beyond — {characterName}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setMinimized((v) => !v)}
+            className="rounded p-1 text-gray-500 transition-colors hover:text-parchment"
+            title={minimized ? 'Expand' : 'Minimize'}
+          >
+            {minimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
+          </button>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-gray-500 transition-colors hover:text-red-400"
+            title="Close"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* iframe content */}
+      {!minimized && (
+        <>
+          <iframe
+            ref={iframeRef}
+            src={`https://www.dndbeyond.com/characters/${characterId}`}
+            className="flex-1 rounded-b-xl"
+            title="D&D Beyond Character Sheet"
+            sandbox="allow-scripts allow-same-origin allow-popups"
+          />
+          {/* Resize handle */}
+          <div
+            className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
+            onPointerDown={onResizeStart}
+            onPointerMove={onResizeMove}
+            onPointerUp={onResizeEnd}
+          >
+            <svg viewBox="0 0 16 16" className="h-full w-full text-gray-600">
+              <path d="M14 14L8 14L14 8Z" fill="currentColor" opacity="0.4" />
+              <path d="M14 14L11 14L14 11Z" fill="currentColor" opacity="0.6" />
+            </svg>
+          </div>
+        </>
+      )}
     </div>
   )
 }

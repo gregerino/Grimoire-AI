@@ -200,23 +200,6 @@ export interface GameState {
 
 // --- Character ---
 
-export async function parseCharacterPdf(file: File) {
-  const formData = new FormData()
-  formData.append('file', file)
-
-  const res = await fetch(`${API_BASE}/character/parse`, {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.error || 'Failed to parse character')
-  }
-
-  return res.json()
-}
-
 export async function saveCharacterSheet(campaignId: string, character: unknown) {
   return jsonFetch(`${API_BASE}/character/save`, {
     method: 'POST',
@@ -226,6 +209,13 @@ export async function saveCharacterSheet(campaignId: string, character: unknown)
 
 export async function getCharacterSheet(campaignId: string) {
   return jsonFetch(`${API_BASE}/character/${campaignId}`)
+}
+
+export async function syncCharacterFromDndb(campaignId: string, url: string) {
+  return jsonFetch(`${API_BASE}/character/sync-dndb`, {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId, url }),
+  })
 }
 
 // --- Oracle ---
