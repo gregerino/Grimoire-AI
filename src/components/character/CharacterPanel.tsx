@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Heart, Shield, Footprints, Upload, Loader2,
   Sword, BookOpen, Star, Backpack, ChevronDown, ChevronUp,
-  Moon, AlertCircle,
+  Moon, AlertCircle, Crosshair,
 } from 'lucide-react'
 import { getCharacterSheet, parseCharacterPdf, saveCharacterSheet } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
@@ -236,6 +236,29 @@ export function CharacterPanel({ campaignId }: Props) {
           </div>
         ))}
       </div>
+
+      {/* Skills */}
+      {character.skills && Object.keys(character.skills).length > 0 && (
+        <CollapsibleSection
+          title={`Skills (${Object.keys(character.skills).length})`}
+          icon={<Crosshair className="h-3.5 w-3.5 text-emerald-400" />}
+          expanded={expandedSection === 'skills'}
+          onToggle={() => toggle('skills')}
+        >
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+            {Object.entries(character.skills)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([skill, bonus]) => (
+                <div key={skill} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-400 truncate">{skill}</span>
+                  <span className={`font-medium tabular-nums ${bonus >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {bonus >= 0 ? `+${bonus}` : bonus}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </CollapsibleSection>
+      )}
 
       {/* Spell Slots */}
       {spellSlotEntries.length > 0 && (
