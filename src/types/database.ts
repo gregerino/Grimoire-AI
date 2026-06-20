@@ -23,6 +23,8 @@ export interface Campaign {
   max_hp: number | null
   image_generation_enabled: boolean
   current_location_id: string | null
+  world_day: number
+  world_hour: number
   status: 'active' | 'paused' | 'completed'
   created_at: string
   updated_at: string
@@ -107,15 +109,42 @@ export interface Note {
   created_at: string
 }
 
+export type ItemCategory = 'weapon' | 'armor' | 'potion' | 'scroll' | 'gear' | 'treasure' | 'tool' | 'other'
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'very_rare' | 'legendary'
+
 export interface InventoryItem {
   id: string
   campaign_id: string
   name: string
   description: string | null
   quantity: number
-  category: 'weapon' | 'armor' | 'potion' | 'scroll' | 'gear' | 'treasure' | 'other'
+  category: ItemCategory
   is_equipped: boolean
+  weight: number
+  value_gp: number
+  value_sp: number
+  value_cp: number
+  rarity: ItemRarity
+  properties: Record<string, unknown>
+  sort_order: number
   created_at: string
+}
+
+export interface CampaignCurrency {
+  id: string
+  campaign_id: string
+  gp: number
+  sp: number
+  cp: number
+  updated_at: string
+}
+
+export type TimeOfDay = 'dawn' | 'morning' | 'midday' | 'afternoon' | 'dusk' | 'evening' | 'night' | 'midnight'
+
+export interface WorldTime {
+  day: number
+  hour: number
+  timeOfDay: TimeOfDay
 }
 
 export interface Pdf {

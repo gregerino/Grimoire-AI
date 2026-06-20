@@ -15,6 +15,7 @@ import { factionRoutes } from './routes/faction'
 import { travelRoutes } from './routes/travel'
 import { memoryRoutes } from './routes/memory'
 import { tavernRoutes } from './routes/tavern'
+import { lootRoutes } from './routes/loot'
 
 dotenv.config()
 
@@ -38,6 +39,7 @@ app.use('/api/faction', factionRoutes)
 app.use('/api/travel', travelRoutes)
 app.use('/api/memory', memoryRoutes)
 app.use('/api/tavern', tavernRoutes)
+app.use('/api/loot', lootRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' })

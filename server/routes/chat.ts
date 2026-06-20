@@ -132,7 +132,13 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
 
     const activeQuests = (questsResult.data || []) as Array<{ title: string; status: string; description: string | null }>
 
+    const resolveTimeOfDay = (h: number) =>
+      h >= 5 && h < 7 ? 'dawn' : h >= 7 && h < 10 ? 'morning' : h >= 10 && h < 14 ? 'midday'
+        : h >= 14 && h < 17 ? 'afternoon' : h >= 17 && h < 19 ? 'dusk' : h >= 19 && h < 21 ? 'evening'
+        : (h >= 21 || h < 1) ? 'night' : 'midnight'
+
     const worldContext: WorldContext = {
+      worldTime: campaign ? { day: (campaign as Record<string, unknown>).world_day as number ?? 1, hour: (campaign as Record<string, unknown>).world_hour as number ?? 8, timeOfDay: resolveTimeOfDay(((campaign as Record<string, unknown>).world_hour as number) ?? 8) } : undefined,
       currentLocation: currentLoc ? { name: currentLoc.name, type: currentLoc.type, description: currentLoc.description } : null,
       factionReputations: factions.map((f: { id: string; name: string }) => {
         const rep = reputations.find((r: { faction_id: string }) => r.faction_id === f.id)

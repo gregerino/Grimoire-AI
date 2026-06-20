@@ -120,7 +120,19 @@ export interface GameState {
   hpChange?: number
   conditionsAdded?: string[]
   conditionsRemoved?: string[]
-  lootFound?: { name: string; category: string; description?: string }[]
+  lootFound?: {
+    name: string
+    category: string
+    rarity?: string
+    description?: string
+    weight?: number
+    value_gp?: number
+    value_sp?: number
+    value_cp?: number
+    properties?: Record<string, unknown>
+  }[]
+  currencyFound?: { gp?: number; sp?: number; cp?: number }
+  timeAdvance?: number
   xpGained?: number
   memoryUpdate?: string
   locationChange?: string

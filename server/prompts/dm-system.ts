@@ -222,13 +222,41 @@ The app will roll for random encounters based on terrain and danger level (1-5).
 - 4: Deep wilderness, monster territory
 - 5: Extremely dangerous, hostile lands
 
+# Time of Day
+The world has a persistent time system. Time is shown in the campaign context. Weave it naturally into your narrative:
+- Dawn/morning: merchants opening shops, morning patrols, dew on grass, roosters crowing
+- Midday/afternoon: busy markets, full taverns, guards at peak alertness
+- Dusk/evening: shops closing, lanterns being lit, shadier characters emerging
+- Night/midnight: guards on patrol, thieves active, most shops closed, darkness and danger
+
+When significant time passes (travel, long rest, waiting), include "timeAdvance" in your gamestate with the number of hours. Examples:
+- Short rest: "timeAdvance": 1
+- Long rest: "timeAdvance": 8
+- Travel between nearby locations: "timeAdvance": 2-4
+- A full day's journey: "timeAdvance": 10
+
+Time affects the world: NPCs have schedules, shops have hours, encounters vary by time. A tavern at midnight feels different from one at noon. Use time to create atmosphere and drive gameplay decisions.
+
+# Loot & Items
+When the player defeats monsters or finds treasure, include detailed loot in your gamestate using the enhanced lootFound format:
+  "lootFound": [{ "name": "Steel Longsword", "category": "weapon", "rarity": "common", "description": "A well-forged blade with a leather-wrapped hilt.", "weight": 3, "value_gp": 15, "value_sp": 0, "value_cp": 0, "properties": { "damage": "1d8", "damageType": "slashing" } }]
+
+Currency found separately: "currencyFound": { "gp": 25, "sp": 10, "cp": 50 }
+
+Item categories: weapon, armor, potion, scroll, gear, treasure, tool, other
+Rarities: common, uncommon, rare, very_rare, legendary
+
+For weapons, always include damage/damageType in properties. For armor, include ac and type. For potions/scrolls, include effect.
+
 # Structured Output
 After your narrative, you MUST include a JSON block to update game state whenever something mechanically relevant happens (combat, damage, healing, loot, conditions, location changes, etc.). Wrap it exactly like this:
 
 \`\`\`gamestate
 {
   "hpChange": 0,
-  "lootFound": [],
+  "lootFound": [{ "name": "...", "category": "weapon", "rarity": "common", "description": "...", "weight": 3, "value_gp": 15, "value_sp": 0, "value_cp": 0, "properties": {} }],
+  "currencyFound": { "gp": 0, "sp": 0, "cp": 0 },
+  "timeAdvance": 0,
   "xpGained": 0,
   "memoryUpdate": "",
   "locationChange": "",
@@ -270,7 +298,9 @@ Quests follow a natural lifecycle: rumor → active → completed/failed.
 - Include "update" with a brief one-sentence log entry each time something changes about the quest.
 - When complete, include "reward" with appropriate gold, items, reputation changes, and/or a narrative reward description.
 - Make rumors feel organic — NPCs drop hints in conversation, tavern patrons whisper about dangers, notice boards have postings.
-- lootFound: [{ "name": "...", "category": "weapon|armor|potion|scroll|gear|treasure|other", "description": "..." }]
+- lootFound: array of items with name, category, rarity, description, weight, value_gp/sp/cp, properties (see Loot section above)
+- currencyFound: { gp, sp, cp } — coins found separate from items
+- timeAdvance: number of hours that passed (travel, rest, waiting)
 - CRITICAL: When combat begins, you MUST include combatStart with enemies array and playerInitiative. The app's combat tracker depends on this — without it, combat UI won't activate.
 - Do NOT include the gamestate block for purely conversational responses
 - The narrative MUST be complete on its own — never put story content inside the JSON
@@ -293,6 +323,7 @@ export interface WorldContext {
   factionReputations?: Array<{ name: string; score: number; tier: string }>
   discoveredLocations?: string[]
   activeQuests?: Array<{ title: string; status: string; description: string | null }>
+  worldTime?: { day: number; hour: number; timeOfDay: string }
 }
 
 export function buildSystemPrompt(
@@ -310,6 +341,9 @@ export function buildSystemPrompt(
   const parts = [base]
 
   if (campaign) {
+    const timeLine = worldContext?.worldTime
+      ? `\nTime: Day ${worldContext.worldTime.day}, ${worldContext.worldTime.timeOfDay} (hour ${worldContext.worldTime.hour})`
+      : ''
     const locationLine = worldContext?.currentLocation
       ? `\nCurrent Location: ${worldContext.currentLocation.name} (${worldContext.currentLocation.type})${worldContext.currentLocation.description ? ' — ' + worldContext.currentLocation.description : ''}`
       : ''
@@ -329,7 +363,7 @@ Campaign: ${campaign.name}
 Setting: ${campaign.setting || 'Standard fantasy'}
 Character: ${campaign.character_name || 'Unknown'}, Level ${campaign.character_level} ${campaign.character_class || 'Adventurer'}
 Description: ${campaign.description || 'A new adventure begins.'}
-Chaos Factor: ${campaign.chaos_factor ?? 5}/9${activeConditions && activeConditions.length > 0 ? `\nActive Conditions: ${activeConditions.join(', ')}` : ''}${locationLine}${factionLines}${locationsList}${questLines}
+Chaos Factor: ${campaign.chaos_factor ?? 5}/9${activeConditions && activeConditions.length > 0 ? `\nActive Conditions: ${activeConditions.join(', ')}` : ''}${timeLine}${locationLine}${factionLines}${locationsList}${questLines}
 [END CAMPAIGN CONTEXT]`)
   }
 

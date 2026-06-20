@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Heart, Flame, MapPin, AlertTriangle, Brain, ChevronDown, ChevronUp, Swords } from 'lucide-react'
+import { Heart, Flame, MapPin, AlertTriangle, Brain, ChevronDown, ChevronUp, Swords, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useCombatStore } from '@/stores/combatStore'
+import { useTimeStore, TIME_ICONS, TIME_LABELS } from '@/stores/timeStore'
 import type { Campaign } from '@/types/database'
 
 interface Memory {
@@ -18,6 +19,9 @@ export function GameStatePanel({ campaign }: Props) {
   const [memories, setMemories] = useState<Memory[]>([])
   const [showAllMemories, setShowAllMemories] = useState(false)
   const [liveCampaign, setLiveCampaign] = useState(campaign)
+  const { worldTime, fetchTime } = useTimeStore()
+
+  useEffect(() => { fetchTime(campaign.id) }, [campaign.id, fetchTime])
 
   const fetchLiveData = useCallback(async () => {
     const [{ data: c }, { data: m }] = await Promise.all([
@@ -128,6 +132,21 @@ export function GameStatePanel({ campaign }: Props) {
           </div>
         </div>
       )}
+
+      {/* Time of Day */}
+      <div className="rounded-xl border border-navy bg-dark-navy p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-blue-400" />
+            <span className="text-xs font-medium text-gray-400">Time</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{TIME_ICONS[worldTime.timeOfDay]}</span>
+            <span className="text-sm font-medium text-parchment">{TIME_LABELS[worldTime.timeOfDay]}</span>
+            <span className="text-[10px] text-gray-500">Day {worldTime.day}</span>
+          </div>
+        </div>
+      </div>
 
       {/* Chaos Factor */}
       <div className="rounded-xl border border-navy bg-dark-navy p-4">

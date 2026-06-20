@@ -44,6 +44,9 @@ import type { SttLanguage } from '@/hooks/useSpeechRecognition'
 import { LocationList } from '@/components/world/LocationList'
 import { ReputationPanel } from '@/components/world/ReputationPanel'
 import { MemoryTab } from '@/components/campaign/tabs/MemoryTab'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { useTimeStore } from '@/stores/timeStore'
+import { LootReveal } from '@/components/loot/LootReveal'
 
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
@@ -96,6 +99,11 @@ export function PlayPage() {
   const sttLang: SttLanguage = ttsLanguage === 'sv' ? 'sv-SE' : 'en-US'
   const { playAmbient, playMusic, playSfx, stopAll: stopAudio, tryUnlock: unlockAudio } = useAudio()
   const autoSavingRef = useRef(false)
+  const [pendingLoot, setPendingLoot] = useState<{
+    items: GameState['lootFound']
+    currency?: GameState['currencyFound']
+    narrative?: string
+  } | null>(null)
 
   const autoSaveSession = useCallback(async () => {
     if (autoSavingRef.current || !currentSession || !id || messages.length === 0) return
@@ -367,6 +375,41 @@ export function PlayPage() {
               playSfx(sfx as SfxType)
             }
           }
+        }
+
+        if (gameState.lootFound?.length || gameState.currencyFound) {
+          if (gameState.lootFound?.length) {
+            const inserts = gameState.lootFound.map((item) => ({
+              campaign_id: id,
+              name: item.name,
+              category: item.category || 'other',
+              description: item.description || null,
+              rarity: item.rarity || 'common',
+              weight: item.weight || 0,
+              value_gp: item.value_gp || 0,
+              value_sp: item.value_sp || 0,
+              value_cp: item.value_cp || 0,
+              properties: item.properties || {},
+              quantity: 1,
+            }))
+            await supabase.from('inventory_items').insert(inserts)
+          }
+
+          if (gameState.currencyFound) {
+            const { gp = 0, sp = 0, cp = 0 } = gameState.currencyFound
+            if (gp > 0 || sp > 0 || cp > 0) {
+              await useInventoryStore.getState().addCurrency(id, { gp, sp, cp })
+            }
+          }
+
+          setPendingLoot({
+            items: gameState.lootFound || [],
+            currency: gameState.currencyFound,
+          })
+        }
+
+        if (gameState.timeAdvance && gameState.timeAdvance > 0) {
+          await useTimeStore.getState().advanceTime(id, gameState.timeAdvance)
         }
       },
       () => {
@@ -744,6 +787,17 @@ export function PlayPage() {
         </div>
 
       </div>
+
+      {/* Loot Reveal Overlay */}
+      {pendingLoot && pendingLoot.items && (
+        <LootReveal
+          items={pendingLoot.items}
+          currency={pendingLoot.currency}
+          narrative={pendingLoot.narrative}
+          onClose={() => setPendingLoot(null)}
+          onPlaySfx={() => playSfx('loot_pickup')}
+        />
+      )}
     </div>
   )
 }
