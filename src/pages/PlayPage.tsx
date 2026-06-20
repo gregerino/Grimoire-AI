@@ -5,7 +5,7 @@ import {
   User, Swords, ScrollText, Package, FileText,
   PanelLeftOpen, PanelLeftClose, Bot, Gauge, Shield,
   Volume2, VolumeX, Square, Pause, Play, Dices, Music,
-  Map, Flag, Brain,
+  MapPin, Flag, Brain,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCombatStore } from '@/stores/combatStore'
@@ -41,7 +41,7 @@ import { AudioMixer } from '@/components/audio/AudioMixer'
 import { useAudio } from '@/hooks/useAudio'
 import type { AmbientType, MusicMood, SfxType } from '@/stores/audioStore'
 import type { SttLanguage } from '@/hooks/useSpeechRecognition'
-import { WorldMap } from '@/components/world/WorldMap'
+import { LocationList } from '@/components/world/LocationList'
 import { ReputationPanel } from '@/components/world/ReputationPanel'
 import { MemoryTab } from '@/components/campaign/tabs/MemoryTab'
 
@@ -52,7 +52,7 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | 'reputation' | 'memory' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | 'locations' | 'reputation' | 'memory' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
@@ -65,6 +65,7 @@ const panelTabs = [
   { id: 'history' as const, icon: History, label: 'Sessions' },
   { id: 'speech' as const, icon: Volume2, label: 'Röst' },
   { id: 'audio' as const, icon: Music, label: 'Ljud' },
+  { id: 'locations' as const, icon: MapPin, label: 'Locations' },
   { id: 'reputation' as const, icon: Flag, label: 'Factions' },
   { id: 'memory' as const, icon: Brain, label: 'Memory' },
 ]
@@ -92,7 +93,6 @@ export function PlayPage() {
   const ttsLanguage = useSpeechStore((s) => s.ttsLanguage)
   const [micListening, setMicListening] = useState(false)
   const [readingSession, setReadingSession] = useState<Session | null>(null)
-  const [showMap, setShowMap] = useState(false)
   const sttLang: SttLanguage = ttsLanguage === 'sv' ? 'sv-SE' : 'en-US'
   const { playAmbient, playMusic, playSfx, stopAll: stopAudio, tryUnlock: unlockAudio } = useAudio()
   const autoSavingRef = useRef(false)
@@ -499,15 +499,6 @@ export function PlayPage() {
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setShowMap(true)}
-            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-navy hover:text-parchment transition-colors"
-            title="World Map"
-          >
-            <Map className="h-3.5 w-3.5" />
-            <span>Map</span>
-          </button>
-          <div className="h-4 w-px bg-navy" />
-          <button
             onClick={() => {
               const next: AiProvider = aiProvider === 'claude' ? 'openai' : 'claude'
               setAiProvider(next)
@@ -580,7 +571,7 @@ export function PlayPage() {
         {sidebarPanel && (
           <div className="flex w-80 shrink-0 flex-col border-r border-navy bg-dark-navy/30">
             {/* Sidebar tab bar */}
-            <div className="flex overflow-x-auto border-b border-navy scrollbar-hide">
+            <div className="grid grid-cols-7 border-b border-navy">
               {panelTabs.map((tab) => (
                 <SidebarTabButton
                   key={tab.id}
@@ -613,24 +604,11 @@ export function PlayPage() {
               {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
               {sidebarPanel === 'speech' && <SpeechSettingsPanel />}
               {sidebarPanel === 'audio' && <AudioMixer />}
+              {sidebarPanel === 'locations' && <LocationList campaignId={id} sessionId={currentSession?.id ?? null} />}
               {sidebarPanel === 'reputation' && <ReputationPanel campaignId={id} />}
               {sidebarPanel === 'memory' && <MemoryTab campaignId={id} />}
             </div>
           </div>
-        )}
-
-        {/* World Map overlay */}
-        {showMap && (
-          <WorldMap
-            campaignId={id}
-            currentLocationId={campaign?.current_location_id ?? null}
-            sessionId={currentSession?.id ?? null}
-            onClose={() => setShowMap(false)}
-            onSendMessage={(msg) => {
-              setShowMap(false)
-              handleSend({ text: msg, displayText: msg })
-            }}
-          />
         )}
 
         {/* Chat area */}
