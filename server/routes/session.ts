@@ -130,27 +130,27 @@ sessionRoutes.post('/:id/summarize', async (req: Request, res: Response) => {
     .join('\n\n')
 
   const result = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
         role: 'user',
-        content: `You are a chronicler writing a journal entry for a D&D adventurer${character_name ? ` named ${character_name}` : ''}. Based on the session transcript below, write a first-person diary entry (2-4 paragraphs) that captures the key events, encounters, discoveries, and emotional moments. Write in an evocative, atmospheric style — as if the character is reflecting on the day's events by candlelight. Include specific details from the session.
+        content: `You are a chronicler writing a journal entry for a D&D adventurer${character_name ? ` named ${character_name}` : ''}. Based on the session transcript below:
+
+1. Write a short, evocative title (3-7 words) that captures the essence of this session — like a chapter name in a novel. Examples: "The Goblin's Bargain", "Shadows Over Cragmaw", "A Deal in Firelight". Output this on the FIRST line prefixed with "TITLE: ".
+
+2. Then write a first-person diary entry (2-4 paragraphs) that captures the key events, encounters, discoveries, and emotional moments. Write in an evocative, atmospheric style — as if the character is reflecting on the day's events by candlelight. Include specific details from the session. Do not include a date header or "Dear Diary" — start directly with the narrative.
 
 SESSION TRANSCRIPT:
-${transcript}
-
-Write the diary entry now. Do not include a date header or "Dear Diary" — start directly with the narrative.`,
+${transcript}`,
       },
     ],
   })
 
-  const summary = result.content[0].type === 'text' ? result.content[0].text : ''
-
-  const firstUserMsg = msgs.find((m: { role: string }) => m.role === 'user')
-  const title = firstUserMsg
-    ? (firstUserMsg as { content: string }).content.slice(0, 60)
-    : 'Untitled session'
+  const raw = result.content[0].type === 'text' ? result.content[0].text : ''
+  const titleMatch = raw.match(/^TITLE:\s*(.+)/m)
+  const title = titleMatch ? titleMatch[1].trim().replace(/^["']|["']$/g, '') : 'Untitled Session'
+  const summary = raw.replace(/^TITLE:\s*.+\n+/m, '').trim()
 
   await supabaseAdmin
     .from('sessions')

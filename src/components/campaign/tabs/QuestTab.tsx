@@ -58,10 +58,17 @@ export function QuestTab({ campaignId }: Props) {
     if (status === 'completed' || status === 'failed') {
       patch.completed_at = new Date().toISOString()
     }
+    setRows((prev) => prev.map((q) => (q.id === quest.id ? { ...q, ...patch } as Quest : q)))
     await supabase.from('quests').update(patch).eq('id', quest.id)
   }
 
+  const setPriority = async (quest: Quest, priority: Quest['priority']) => {
+    setRows((prev) => prev.map((q) => (q.id === quest.id ? { ...q, priority } : q)))
+    await supabase.from('quests').update({ priority }).eq('id', quest.id)
+  }
+
   const handleDelete = async (id: string) => {
+    setRows((prev) => prev.filter((q) => q.id !== id))
     await supabase.from('quests').delete().eq('id', id)
   }
 
@@ -111,10 +118,10 @@ export function QuestTab({ campaignId }: Props) {
         <p className="py-4 text-center text-sm text-gray-600">No quests yet. Rumors will appear as NPCs share whispers and secrets.</p>
       ) : (
         <div className="space-y-3">
-          <QuestSection title="Rumors" quests={rumors} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onDelete={handleDelete} />
-          <QuestSection title="Active Quests" quests={active} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onDelete={handleDelete} />
+          <QuestSection title="Rumors" quests={rumors} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onSetPriority={setPriority} onDelete={handleDelete} />
+          <QuestSection title="Active Quests" quests={active} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onSetPriority={setPriority} onDelete={handleDelete} />
           {done.length > 0 && (
-            <QuestSection title="Completed / Failed" quests={done} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onDelete={handleDelete} />
+            <QuestSection title="Completed / Failed" quests={done} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onSetPriority={setPriority} onDelete={handleDelete} />
           )}
         </div>
       )}
@@ -128,6 +135,7 @@ function QuestSection({
   expandedId,
   onToggle,
   onSetStatus,
+  onSetPriority,
   onDelete,
 }: {
   title: string
@@ -135,6 +143,7 @@ function QuestSection({
   expandedId: string | null
   onToggle: (id: string | null) => void
   onSetStatus: (q: Quest, s: Quest['status']) => void
+  onSetPriority: (q: Quest, p: Quest['priority']) => void
   onDelete: (id: string) => void
 }) {
   if (quests.length === 0) return null
@@ -150,6 +159,7 @@ function QuestSection({
             expanded={expandedId === quest.id}
             onToggle={() => onToggle(expandedId === quest.id ? null : quest.id)}
             onSetStatus={onSetStatus}
+            onSetPriority={onSetPriority}
             onDelete={onDelete}
           />
         ))}
@@ -163,12 +173,14 @@ function QuestCard({
   expanded,
   onToggle,
   onSetStatus,
+  onSetPriority,
   onDelete,
 }: {
   quest: Quest
   expanded: boolean
   onToggle: () => void
   onSetStatus: (q: Quest, s: Quest['status']) => void
+  onSetPriority: (q: Quest, p: Quest['priority']) => void
   onDelete: (id: string) => void
 }) {
   const config = statusConfig[quest.status]
@@ -253,7 +265,16 @@ function QuestCard({
             </div>
           )}
 
-          <div className="flex gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1">
+            <select
+              value={quest.priority}
+              onChange={(e) => onSetPriority(quest, e.target.value as Quest['priority'])}
+              className="rounded-lg border border-navy bg-midnight px-2 py-1 text-xs text-parchment outline-none focus:border-gold/40 transition-colors"
+            >
+              <option value="main">Main</option>
+              <option value="side">Side</option>
+              <option value="personal">Personal</option>
+            </select>
             {quest.status === 'rumor' && (
               <button
                 onClick={() => onSetStatus(quest, 'active')}

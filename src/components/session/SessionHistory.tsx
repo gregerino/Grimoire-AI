@@ -32,7 +32,7 @@ export function SessionHistory({ sessions, onLoadSession, onReadSession }: Props
             <div className="flex items-center gap-2">
               <BookOpen className="h-3.5 w-3.5 shrink-0 text-gold" />
               <span className="text-sm font-medium text-parchment line-clamp-1">
-                {session.title || 'Untitled Session'}
+                {session.title || `Session ${endedSessions.length - endedSessions.indexOf(session)}`}
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-1 text-[10px] text-gray-600">

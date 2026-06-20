@@ -23,7 +23,7 @@ npcRoutes.post('/:id/ai-update', async (req: Request, res: Response) => {
   }
 
   const result = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
