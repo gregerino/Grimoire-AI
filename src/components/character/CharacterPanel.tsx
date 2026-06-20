@@ -551,16 +551,20 @@ function DndbFloatingWindow({
   })
 
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
-  const resizeRef = useRef<{ startX: number; startY: number; origW: number; origH: number } | null>(null)
+  const resizeRef = useRef<{
+    startX: number; startY: number
+    origX: number; origY: number; origW: number; origH: number
+    edges: { top: boolean; bottom: boolean; left: boolean; right: boolean }
+  } | null>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  const setPointerCapture = (e: React.PointerEvent) => {
+  const capture = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId)
   }
 
   const onDragStart = (e: React.PointerEvent) => {
     e.preventDefault()
-    setPointerCapture(e)
+    capture(e)
     dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y }
   }
 
@@ -579,24 +583,45 @@ function DndbFloatingWindow({
     dragRef.current = null
   }
 
-  const onResizeStart = (e: React.PointerEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setPointerCapture(e)
-    resizeRef.current = { startX: e.clientX, startY: e.clientY, origW: size.w, origH: size.h }
+  const onEdgeDown = (edges: { top?: boolean; bottom?: boolean; left?: boolean; right?: boolean }) =>
+    (e: React.PointerEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      capture(e)
+      resizeRef.current = {
+        startX: e.clientX, startY: e.clientY,
+        origX: pos.x, origY: pos.y, origW: size.w, origH: size.h,
+        edges: { top: !!edges.top, bottom: !!edges.bottom, left: !!edges.left, right: !!edges.right },
+      }
+    }
+
+  const onEdgeMove = (e: React.PointerEvent) => {
+    const r = resizeRef.current
+    if (!r) return
+    const dx = e.clientX - r.startX
+    const dy = e.clientY - r.startY
+    let { x, y } = pos
+    let w = size.w
+    let h = size.h
+
+    if (r.edges.right) w = Math.max(MIN_SIZE.w, r.origW + dx)
+    if (r.edges.bottom) h = Math.max(MIN_SIZE.h, r.origH + dy)
+    if (r.edges.left) {
+      const newW = Math.max(MIN_SIZE.w, r.origW - dx)
+      x = r.origX + (r.origW - newW)
+      w = newW
+    }
+    if (r.edges.top) {
+      const newH = Math.max(MIN_SIZE.h, r.origH - dy)
+      y = r.origY + (r.origH - newH)
+      h = newH
+    }
+
+    setSize({ w, h })
+    setPos({ x, y })
   }
 
-  const onResizeMove = (e: React.PointerEvent) => {
-    if (!resizeRef.current) return
-    const dx = e.clientX - resizeRef.current.startX
-    const dy = e.clientY - resizeRef.current.startY
-    setSize({
-      w: Math.max(MIN_SIZE.w, resizeRef.current.origW + dx),
-      h: Math.max(MIN_SIZE.h, resizeRef.current.origH + dy),
-    })
-  }
-
-  const onResizeEnd = () => {
+  const onEdgeUp = () => {
     if (resizeRef.current) saveWindowState(pos.x, pos.y, size.w, size.h)
     resizeRef.current = null
   }
@@ -649,17 +674,18 @@ function DndbFloatingWindow({
             title="D&D Beyond Character Sheet"
             sandbox="allow-scripts allow-same-origin allow-popups"
           />
-          {/* Resize handle */}
-          <div
-            className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
-            onPointerDown={onResizeStart}
-            onPointerMove={onResizeMove}
-            onPointerUp={onResizeEnd}
-          >
-            <svg viewBox="0 0 16 16" className="h-full w-full text-gray-600">
-              <path d="M14 14L8 14L14 8Z" fill="currentColor" opacity="0.4" />
-              <path d="M14 14L11 14L14 11Z" fill="currentColor" opacity="0.6" />
-            </svg>
+          {/* Resize edges */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Edges */}
+            <div className="absolute -top-1 left-2 right-2 h-2 cursor-ns-resize pointer-events-auto" onPointerDown={onEdgeDown({ top: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
+            <div className="absolute -bottom-1 left-2 right-2 h-2 cursor-ns-resize pointer-events-auto" onPointerDown={onEdgeDown({ bottom: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
+            <div className="absolute -left-1 top-2 bottom-2 w-2 cursor-ew-resize pointer-events-auto" onPointerDown={onEdgeDown({ left: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
+            <div className="absolute -right-1 top-2 bottom-2 w-2 cursor-ew-resize pointer-events-auto" onPointerDown={onEdgeDown({ right: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
+            {/* Corners */}
+            <div className="absolute -top-1 -left-1 h-3 w-3 cursor-nwse-resize pointer-events-auto" onPointerDown={onEdgeDown({ top: true, left: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
+            <div className="absolute -top-1 -right-1 h-3 w-3 cursor-nesw-resize pointer-events-auto" onPointerDown={onEdgeDown({ top: true, right: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
+            <div className="absolute -bottom-1 -left-1 h-3 w-3 cursor-nesw-resize pointer-events-auto" onPointerDown={onEdgeDown({ bottom: true, left: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
+            <div className="absolute -bottom-1 -right-1 h-3 w-3 cursor-nwse-resize pointer-events-auto" onPointerDown={onEdgeDown({ bottom: true, right: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
           </div>
         </>
       )}
