@@ -37,7 +37,8 @@ export function useSpeech() {
   const prefetchNext = () => {
     const next = queueRef.current[0]
     if (next && !next.prefetched) {
-      next.prefetched = fetchTtsAudio(next.text, next.speaker, next.voiceId)
+      const { ttsTemperature } = useSpeechStore.getState()
+      next.prefetched = fetchTtsAudio(next.text, next.speaker, next.voiceId, ttsTemperature)
     }
   }
 
@@ -54,7 +55,8 @@ export function useSpeech() {
     setPaused(false)
 
     try {
-      const blob = await (item.prefetched || fetchTtsAudio(item.text, item.speaker, item.voiceId))
+      const { ttsTemperature } = useSpeechStore.getState()
+      const blob = await (item.prefetched || fetchTtsAudio(item.text, item.speaker, item.voiceId, ttsTemperature))
       if (stoppedRef.current) {
         activeRef.current = false
         return

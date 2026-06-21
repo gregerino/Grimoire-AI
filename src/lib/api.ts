@@ -338,11 +338,11 @@ export async function generateImage(
 
 // --- TTS ---
 
-export async function fetchTtsAudio(text: string, speaker: string, voiceId?: string | null): Promise<Blob> {
+export async function fetchTtsAudio(text: string, speaker: string, voiceId?: string | null, temperature?: number): Promise<Blob> {
   const res = await fetch(`${API_BASE}/tts/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, speaker, ...(voiceId ? { voiceId } : {}) }),
+    body: JSON.stringify({ text, speaker, ...(voiceId ? { voiceId } : {}), ...(temperature != null ? { temperature } : {}) }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))

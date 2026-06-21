@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Volume2, VolumeX, Loader2 } from 'lucide-react'
-import { useSpeechStore, type TtsLanguage } from '@/stores/speechStore'
+import { useSpeechStore, type TtsLanguage, type TtsTemperature } from '@/stores/speechStore'
 import { fetchTtsAudio, fetchTtsVoices, type TtsVoice } from '@/lib/api'
 
 const NARRATOR_PREVIEW = 'Hello there! I am your narrator for this campaign. Lets go on an adventure together.'
 
 export function SpeechSettingsPanel() {
-  const { enabled, autoRead, defaultVoiceId, ttsLanguage, setEnabled, setAutoRead, setDefaultVoiceId, setTtsLanguage } = useSpeechStore()
+  const { enabled, autoRead, defaultVoiceId, ttsLanguage, ttsTemperature, setEnabled, setAutoRead, setDefaultVoiceId, setTtsLanguage, setTtsTemperature } = useSpeechStore()
   const [playing, setPlaying] = useState(false)
   const [voices, setVoices] = useState<TtsVoice[]>([])
   const [loadingVoices, setLoadingVoices] = useState(false)
@@ -117,6 +117,27 @@ export function SpeechSettingsPanel() {
                 </button>
               </>
             )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-400">Uttrycksfullhet</label>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={1}
+              value={ttsTemperature === 0.3 ? 0 : ttsTemperature === 0.7 ? 1 : 2}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                setTtsTemperature((v === 0 ? 0.3 : v === 1 ? 0.7 : 1.4) as TtsTemperature)
+              }}
+              className="w-full accent-gold"
+            />
+            <div className="flex justify-between text-[10px] text-gray-600">
+              <span>Lugn</span>
+              <span>Normal</span>
+              <span>Dramatisk</span>
+            </div>
           </div>
         </>
       )}

@@ -4,15 +4,19 @@ import { persist } from 'zustand/middleware'
 export type VoiceProfileKey = 'narrator' | 'villain' | 'elder' | 'warrior' | 'mystic' | 'merchant'
 export type TtsLanguage = 'sv' | 'en'
 
+export type TtsTemperature = 0.3 | 0.7 | 1.4
+
 interface SpeechState {
   enabled: boolean
   autoRead: boolean
   defaultVoiceId: string | null
   ttsLanguage: TtsLanguage
+  ttsTemperature: TtsTemperature
   setEnabled: (v: boolean) => void
   setAutoRead: (v: boolean) => void
   setDefaultVoiceId: (v: string | null) => void
   setTtsLanguage: (v: TtsLanguage) => void
+  setTtsTemperature: (v: TtsTemperature) => void
 }
 
 export const useSpeechStore = create<SpeechState>()(
@@ -22,10 +26,12 @@ export const useSpeechStore = create<SpeechState>()(
       autoRead: true,
       defaultVoiceId: null,
       ttsLanguage: 'sv',
+      ttsTemperature: 0.7 as TtsTemperature,
       setEnabled: (v) => set({ enabled: v }),
       setAutoRead: (v) => set({ autoRead: v }),
       setDefaultVoiceId: (v) => set({ defaultVoiceId: v }),
       setTtsLanguage: (v) => set({ ttsLanguage: v }),
+      setTtsTemperature: (v) => set({ ttsTemperature: v }),
     }),
     { name: 'grimoire-speech' },
   ),

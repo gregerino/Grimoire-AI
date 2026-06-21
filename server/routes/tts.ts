@@ -58,7 +58,7 @@ function addSteeringTags(text: string): string {
   return steered
 }
 
-async function inworldStream(text: string, voiceId: string, res: Response) {
+async function inworldStream(text: string, voiceId: string, res: Response, temperature?: number) {
   const response = await fetch(`${INWORLD_BASE}/tts/v1/voice:stream`, {
     method: 'POST',
     headers: {
@@ -70,6 +70,7 @@ async function inworldStream(text: string, voiceId: string, res: Response) {
       voiceId,
       modelId: DEFAULT_MODEL_ID,
       audioConfig: { audioEncoding: 'MP3', sampleRateHertz: 24000 },
+      ...(temperature != null && { temperature }),
     }),
   })
 
@@ -121,7 +122,7 @@ async function inworldStream(text: string, voiceId: string, res: Response) {
   res.end()
 }
 
-async function inworldSynth(text: string, voiceId: string, res: Response) {
+async function inworldSynth(text: string, voiceId: string, res: Response, temperature?: number) {
   const response = await withRetry(
     () => fetch(`${INWORLD_BASE}/tts/v1/voice`, {
       method: 'POST',
@@ -134,6 +135,7 @@ async function inworldSynth(text: string, voiceId: string, res: Response) {
         voiceId,
         modelId: DEFAULT_MODEL_ID,
         audioConfig: { audioEncoding: 'MP3', sampleRateHertz: 24000 },
+        ...(temperature != null && { temperature }),
       }),
     }),
     { maxRetries: 2, timeoutMs: 30_000 },
@@ -188,7 +190,7 @@ ttsRoutes.get('/voices', async (_req: Request, res: Response) => {
 
 ttsRoutes.post('/stream', async (req: Request, res: Response) => {
   try {
-    const { text, speaker, voiceId: overrideVoiceId } = req.body
+    const { text, speaker, voiceId: overrideVoiceId, temperature } = req.body
     if (!text || typeof text !== 'string') {
       res.status(400).json({ error: 'Missing text' })
       return
@@ -199,7 +201,7 @@ ttsRoutes.post('/stream', async (req: Request, res: Response) => {
     }
 
     const voiceId = resolveVoiceId(speaker, overrideVoiceId)
-    await inworldStream(addSteeringTags(text), voiceId, res)
+    await inworldStream(addSteeringTags(text), voiceId, res, temperature)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'TTS stream failed'
     console.error('TTS stream error:', message)
@@ -211,7 +213,7 @@ ttsRoutes.post('/stream', async (req: Request, res: Response) => {
 
 ttsRoutes.post('/', async (req: Request, res: Response) => {
   try {
-    const { text, speaker, voiceId: overrideVoiceId } = req.body
+    const { text, speaker, voiceId: overrideVoiceId, temperature } = req.body
     if (!text || typeof text !== 'string') {
       res.status(400).json({ error: 'Missing text' })
       return
@@ -222,7 +224,7 @@ ttsRoutes.post('/', async (req: Request, res: Response) => {
     }
 
     const voiceId = resolveVoiceId(speaker, overrideVoiceId)
-    await inworldSynth(addSteeringTags(text), voiceId, res)
+    await inworldSynth(addSteeringTags(text), voiceId, res, temperature)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'TTS failed'
     console.error('TTS error:', message)

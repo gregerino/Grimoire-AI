@@ -59,7 +59,7 @@ describe('useSpeech', () => {
       result.current.speakPlain('Du går in i grottan.')
       await new Promise((r) => setTimeout(r, 10))
     })
-    expect(fetchTtsAudio).toHaveBeenCalledWith('Du går in i grottan.', 'narrator', null)
+    expect(fetchTtsAudio).toHaveBeenCalledWith('Du går in i grottan.', 'narrator', null, 0.7)
     expect(mockPlay).toHaveBeenCalled()
   })
 
@@ -70,7 +70,7 @@ describe('useSpeech', () => {
       result.current.speakPlain('Jag ska krossa dig!', 'villain')
       await new Promise((r) => setTimeout(r, 10))
     })
-    expect(fetchTtsAudio).toHaveBeenCalledWith('Jag ska krossa dig!', 'villain', null)
+    expect(fetchTtsAudio).toHaveBeenCalledWith('Jag ska krossa dig!', 'villain', null, 0.7)
   })
 
   it('passes defaultVoiceId for narrator', async () => {
@@ -81,7 +81,7 @@ describe('useSpeech', () => {
       result.current.speakPlain('Test')
       await new Promise((r) => setTimeout(r, 10))
     })
-    expect(fetchTtsAudio).toHaveBeenCalledWith('Test', 'narrator', 'custom-voice-123')
+    expect(fetchTtsAudio).toHaveBeenCalledWith('Test', 'narrator', 'custom-voice-123', 0.7)
   })
 
   it('does not pass defaultVoiceId for non-narrator speakers', async () => {
@@ -92,7 +92,7 @@ describe('useSpeech', () => {
       result.current.speakPlain('Test', 'villain')
       await new Promise((r) => setTimeout(r, 10))
     })
-    expect(fetchTtsAudio).toHaveBeenCalledWith('Test', 'villain', null)
+    expect(fetchTtsAudio).toHaveBeenCalledWith('Test', 'villain', null, 0.7)
   })
 
   it('enqueues sentences for streaming TTS', async () => {
