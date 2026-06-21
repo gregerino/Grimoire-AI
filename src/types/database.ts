@@ -25,6 +25,8 @@ export interface Campaign {
   current_location_id: string | null
   world_day: number
   world_hour: number
+  dm_notes: string | null
+  player_notes: string | null
   status: 'active' | 'paused' | 'completed'
   created_at: string
   updated_at: string
@@ -151,6 +153,15 @@ export interface Pdf {
   id: string
   user_id: string
   campaign_id: string
+  filename: string
+  storage_path: string
+  status: 'processing' | 'indexed' | 'error'
+  created_at: string
+}
+
+export interface Rulebook {
+  id: string
+  user_id: string
   filename: string
   storage_path: string
   status: 'processing' | 'indexed' | 'error'

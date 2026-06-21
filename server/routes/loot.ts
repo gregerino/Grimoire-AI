@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { supabaseAdmin } from '../lib/supabase-admin'
+import { withRetry } from '../lib/retry'
 import { resolveFateRoll, type FateResult } from '../../src/lib/fate-chart'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -56,10 +57,13 @@ lootRoutes.post('/generate', async (req: Request, res: Response) => {
 
     let ragContext = ''
     try {
-      const embeddingResponse = await openai.embeddings.create({
-        model: 'text-embedding-3-small',
-        input: `${monster_name} loot treasure drops items CR ${monster_cr ?? ''}`,
-      })
+      const embeddingResponse = await withRetry(
+        () => openai.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: `${monster_name} loot treasure drops items CR ${monster_cr ?? ''}`,
+        }),
+        { maxRetries: 2, timeoutMs: 15_000 },
+      )
       const queryEmbedding = embeddingResponse.data[0].embedding
 
       const { data: ragResults } = await supabaseAdmin.rpc('match_documents', {
@@ -115,12 +119,15 @@ Rules:
 - The narrative should feel like a discovery moment — dramatic and immersive
 - Weight in pounds, following D&D 5e standards`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      temperature: 0.8,
-      messages: [{ role: 'user', content: prompt }],
-    })
+    const response = await withRetry(
+      () => anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        temperature: 0.8,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      { maxRetries: 2, timeoutMs: 30_000 },
+    )
 
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
     const lootData: LootResult = { ...JSON.parse(text), fateResult: fateResult.result }

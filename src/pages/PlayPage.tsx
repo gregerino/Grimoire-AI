@@ -5,7 +5,7 @@ import {
   User, Swords, ScrollText, Package, FileText,
   PanelLeftOpen, PanelLeftClose, Bot, Gauge, Shield,
   Volume2, VolumeX, Square, Pause, Play, Dices, Music,
-  MapPin, Flag, Brain,
+  MapPin, Flag, Brain, StickyNote,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCombatStore } from '@/stores/combatStore'
@@ -44,6 +44,7 @@ import type { SttLanguage } from '@/hooks/useSpeechRecognition'
 import { LocationList } from '@/components/world/LocationList'
 import { ReputationPanel } from '@/components/world/ReputationPanel'
 import { MemoryTab } from '@/components/campaign/tabs/MemoryTab'
+import { NotesTab } from '@/components/campaign/tabs/NotesTab'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useTimeStore } from '@/stores/timeStore'
 import { LootReveal } from '@/components/loot/LootReveal'
@@ -55,7 +56,7 @@ interface Message {
   content: string
 }
 
-type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | 'locations' | 'reputation' | 'memory' | null
+type SidebarPanel = 'gamestate' | 'history' | 'overview' | 'npcs' | 'quests' | 'inventory' | 'library' | 'character' | 'combat' | 'speech' | 'audio' | 'locations' | 'reputation' | 'memory' | 'notes' | null
 
 const panelTabs = [
   { id: 'gamestate' as const, icon: Gauge, label: 'Game State' },
@@ -70,6 +71,7 @@ const panelTabs = [
   { id: 'audio' as const, icon: Music, label: 'Ljud' },
   { id: 'locations' as const, icon: MapPin, label: 'Locations' },
   { id: 'reputation' as const, icon: Flag, label: 'Factions' },
+  { id: 'notes' as const, icon: StickyNote, label: 'Notes' },
   { id: 'memory' as const, icon: Brain, label: 'Memory' },
 ]
 
@@ -444,6 +446,8 @@ export function PlayPage() {
       },
       aiProvider,
       ttsLanguage,
+      undefined,
+      user?.id,
     )
   }
 
@@ -649,6 +653,7 @@ export function PlayPage() {
               {sidebarPanel === 'audio' && <AudioMixer />}
               {sidebarPanel === 'locations' && <LocationList campaignId={id} sessionId={currentSession?.id ?? null} />}
               {sidebarPanel === 'reputation' && <ReputationPanel campaignId={id} />}
+              {sidebarPanel === 'notes' && <NotesTab campaignId={id} compact />}
               {sidebarPanel === 'memory' && <MemoryTab campaignId={id} />}
             </div>
           </div>

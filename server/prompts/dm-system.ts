@@ -357,6 +357,10 @@ export function buildSystemPrompt(
       ? `\nActive Quests & Rumors:\n${worldContext.activeQuests.map(q => `  - [${q.status}] ${q.title}${q.description ? ': ' + q.description : ''}`).join('\n')}`
       : ''
 
+    const dmNotesBlock = (campaign as Record<string, unknown>).dm_notes
+      ? `\n\n[DM NOTES — follow these instructions for this campaign]\n${(campaign as Record<string, unknown>).dm_notes}\n[END DM NOTES]`
+      : ''
+
     parts.push(`
 [CAMPAIGN CONTEXT]
 Campaign: ${campaign.name}
@@ -364,7 +368,7 @@ Setting: ${campaign.setting || 'Standard fantasy'}
 Character: ${campaign.character_name || 'Unknown'}, Level ${campaign.character_level} ${campaign.character_class || 'Adventurer'}
 Description: ${campaign.description || 'A new adventure begins.'}
 Chaos Factor: ${campaign.chaos_factor ?? 5}/9${activeConditions && activeConditions.length > 0 ? `\nActive Conditions: ${activeConditions.join(', ')}` : ''}${timeLine}${locationLine}${factionLines}${locationsList}${questLines}
-[END CAMPAIGN CONTEXT]`)
+[END CAMPAIGN CONTEXT]${dmNotesBlock}`)
   }
 
   if (memories.length > 0) {

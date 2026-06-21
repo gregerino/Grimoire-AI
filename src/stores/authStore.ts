@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { setSentryUser, clearSentryUser } from '@/lib/sentry'
 
 interface AuthState {
   user: SupabaseUser | null
@@ -20,8 +21,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     const { data: { session } } = await supabase.auth.getSession()
     set({ session, user: session?.user ?? null, loading: false })
 
+    if (session?.user) setSentryUser(session.user.id, session.user.email ?? undefined)
+
     supabase.auth.onAuthStateChange((_event, session) => {
       set({ session, user: session?.user ?? null })
+      if (session?.user) setSentryUser(session.user.id, session.user.email ?? undefined)
+      else clearSentryUser()
     })
   },
 

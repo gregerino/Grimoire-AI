@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import OpenAI from 'openai'
 import crypto from 'crypto'
 import { supabaseAdmin } from '../lib/supabase-admin'
+import { withRetry } from '../lib/retry'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -69,13 +70,16 @@ async function generateAndStore(
   const cached = await getCachedImage(campaignId, promptHash)
   if (cached) return cached
 
-  const response = await openai.images.generate({
-    model: 'gpt-image-1',
-    prompt,
-    n: 1,
-    size,
-    quality: 'low',
-  })
+  const response = await withRetry(
+    () => openai.images.generate({
+      model: 'gpt-image-1',
+      prompt,
+      n: 1,
+      size,
+      quality: 'low',
+    }),
+    { maxRetries: 2, timeoutMs: 60_000 },
+  )
 
   const b64 = response.data[0].b64_json
   if (!b64) throw new Error('No image data returned')

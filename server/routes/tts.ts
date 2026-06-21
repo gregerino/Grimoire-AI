@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express'
+import { withRetry } from '../lib/retry'
 
 const INWORLD_BASE = 'https://api.inworld.ai'
 
@@ -121,19 +122,22 @@ async function inworldStream(text: string, voiceId: string, res: Response) {
 }
 
 async function inworldSynth(text: string, voiceId: string, res: Response) {
-  const response = await fetch(`${INWORLD_BASE}/tts/v1/voice`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${process.env.INWORLD_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      text,
-      voiceId,
-      modelId: DEFAULT_MODEL_ID,
-      audioConfig: { audioEncoding: 'MP3', sampleRateHertz: 24000 },
+  const response = await withRetry(
+    () => fetch(`${INWORLD_BASE}/tts/v1/voice`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${process.env.INWORLD_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        voiceId,
+        modelId: DEFAULT_MODEL_ID,
+        audioConfig: { audioEncoding: 'MP3', sampleRateHertz: 24000 },
+      }),
     }),
-  })
+    { maxRetries: 2, timeoutMs: 30_000 },
+  )
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({ message: response.statusText }))

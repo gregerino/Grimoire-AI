@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Heart, Shield, Footprints, Loader2,
   Sword, BookOpen, Star, Backpack, ChevronDown, ChevronUp,
   Moon, AlertCircle, Crosshair, RefreshCw, Link, ExternalLink,
-  Minimize2, Maximize2, X, GripHorizontal,
 } from 'lucide-react'
 import { getCharacterSheet, saveCharacterSheet, syncCharacterFromDndb } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
@@ -52,7 +51,6 @@ export function CharacterPanel({ campaignId }: Props) {
   const [syncing, setSyncing] = useState(false)
   const [dndbUrl, setDndbUrl] = useState('')
   const [showDndbInput, setShowDndbInput] = useState(false)
-  const [showDndbSheet, setShowDndbSheet] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [showRestDialog, setShowRestDialog] = useState(false)
@@ -187,9 +185,28 @@ export function CharacterPanel({ campaignId }: Props) {
           </button>
           {character?.dndbeyondId && (
             <button
-              onClick={() => setShowDndbSheet(true)}
+              onClick={() => {
+                const saved = loadWindowState()
+                const w = saved?.w ?? 800
+                const h = saved?.h ?? 700
+                const x = saved?.x ?? Math.floor((window.screenX + window.innerWidth / 2) - w / 2)
+                const y = saved?.y ?? Math.floor((window.screenY + window.innerHeight / 2) - h / 2)
+                const popup = window.open(
+                  `https://www.dndbeyond.com/characters/${character.dndbeyondId}`,
+                  'dndbeyond-sheet',
+                  `width=${w},height=${h},left=${x},top=${y},resizable=yes,scrollbars=yes`,
+                )
+                if (popup) {
+                  const interval = setInterval(() => {
+                    if (popup.closed) { clearInterval(interval); return }
+                    try {
+                      saveWindowState(popup.screenX, popup.screenY, popup.outerWidth, popup.outerHeight)
+                    } catch { /* cross-origin */ }
+                  }, 2000)
+                }
+              }}
               className="rounded p-1 text-gray-600 transition-colors hover:text-gold"
-              title="View D&D Beyond character sheet"
+              title="Open D&D Beyond character sheet"
             >
               <ExternalLink className="h-3.5 w-3.5" />
             </button>
@@ -455,14 +472,6 @@ export function CharacterPanel({ campaignId }: Props) {
         />
       )}
 
-      {/* D&D Beyond Floating Window */}
-      {showDndbSheet && character?.dndbeyondId && (
-        <DndbFloatingWindow
-          characterId={character.dndbeyondId}
-          characterName={character.name}
-          onClose={() => setShowDndbSheet(false)}
-        />
-      )}
     </div>
   )
 }
@@ -508,187 +517,18 @@ function CurrencyBadge({ label, value, color }: { label: string; value: number; 
   )
 }
 
-const DEFAULT_SIZE = { w: 700, h: 500 }
-const MIN_SIZE = { w: 320, h: 200 }
-const MINIMIZED_H = 40
-const STORAGE_KEY = 'grimoire-dndb-window'
+const DNDB_WINDOW_KEY = 'grimoire-dndb-window'
 
 function loadWindowState(): { w: number; h: number; x: number; y: number } | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(DNDB_WINDOW_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    if (parsed.w >= MIN_SIZE.w && parsed.h >= MIN_SIZE.h) return parsed
+    if (parsed.w >= 400 && parsed.h >= 300) return parsed
   } catch { /* ignore */ }
   return null
 }
 
 function saveWindowState(x: number, y: number, w: number, h: number) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y, w, h }))
-}
-
-function DndbFloatingWindow({
-  characterId,
-  characterName,
-  onClose,
-}: {
-  characterId: string
-  characterName: string
-  onClose: () => void
-}) {
-  const [minimized, setMinimized] = useState(false)
-  const [size, setSize] = useState(() => {
-    const saved = loadWindowState()
-    return saved ? { w: saved.w, h: saved.h } : DEFAULT_SIZE
-  })
-  const [pos, setPos] = useState(() => {
-    const saved = loadWindowState()
-    if (saved) return { x: saved.x, y: saved.y }
-    return {
-      x: Math.max(0, Math.floor((window.innerWidth - DEFAULT_SIZE.w) / 2)),
-      y: Math.max(0, Math.floor((window.innerHeight - DEFAULT_SIZE.h) / 2)),
-    }
-  })
-
-  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
-  const resizeRef = useRef<{
-    startX: number; startY: number
-    origX: number; origY: number; origW: number; origH: number
-    edges: { top: boolean; bottom: boolean; left: boolean; right: boolean }
-  } | null>(null)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-
-  const capture = (e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId)
-  }
-
-  const onDragStart = (e: React.PointerEvent) => {
-    e.preventDefault()
-    capture(e)
-    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y }
-  }
-
-  const onDragMove = (e: React.PointerEvent) => {
-    if (!dragRef.current) return
-    const dx = e.clientX - dragRef.current.startX
-    const dy = e.clientY - dragRef.current.startY
-    setPos({
-      x: Math.max(0, Math.min(window.innerWidth - 100, dragRef.current.origX + dx)),
-      y: Math.max(0, Math.min(window.innerHeight - 40, dragRef.current.origY + dy)),
-    })
-  }
-
-  const onDragEnd = () => {
-    if (dragRef.current) saveWindowState(pos.x, pos.y, size.w, size.h)
-    dragRef.current = null
-  }
-
-  const onEdgeDown = (edges: { top?: boolean; bottom?: boolean; left?: boolean; right?: boolean }) =>
-    (e: React.PointerEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      capture(e)
-      resizeRef.current = {
-        startX: e.clientX, startY: e.clientY,
-        origX: pos.x, origY: pos.y, origW: size.w, origH: size.h,
-        edges: { top: !!edges.top, bottom: !!edges.bottom, left: !!edges.left, right: !!edges.right },
-      }
-    }
-
-  const onEdgeMove = (e: React.PointerEvent) => {
-    const r = resizeRef.current
-    if (!r) return
-    const dx = e.clientX - r.startX
-    const dy = e.clientY - r.startY
-    let { x, y } = pos
-    let w = size.w
-    let h = size.h
-
-    if (r.edges.right) w = Math.max(MIN_SIZE.w, r.origW + dx)
-    if (r.edges.bottom) h = Math.max(MIN_SIZE.h, r.origH + dy)
-    if (r.edges.left) {
-      const newW = Math.max(MIN_SIZE.w, r.origW - dx)
-      x = r.origX + (r.origW - newW)
-      w = newW
-    }
-    if (r.edges.top) {
-      const newH = Math.max(MIN_SIZE.h, r.origH - dy)
-      y = r.origY + (r.origH - newH)
-      h = newH
-    }
-
-    setSize({ w, h })
-    setPos({ x, y })
-  }
-
-  const onEdgeUp = () => {
-    if (resizeRef.current) saveWindowState(pos.x, pos.y, size.w, size.h)
-    resizeRef.current = null
-  }
-
-  const currentH = minimized ? MINIMIZED_H : size.h
-
-  return (
-    <div
-      className="fixed z-50 flex flex-col rounded-xl border border-navy bg-dark-navy shadow-2xl"
-      style={{ left: pos.x, top: pos.y, width: size.w, height: currentH }}
-    >
-      {/* Title bar — draggable */}
-      <div
-        className="flex shrink-0 cursor-move items-center justify-between rounded-t-xl border-b border-navy bg-navy/50 px-3 py-2 select-none"
-        onPointerDown={onDragStart}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-      >
-        <div className="flex items-center gap-2 pointer-events-none">
-          <GripHorizontal className="h-3.5 w-3.5 text-gray-600" />
-          <span className="text-xs font-medium text-parchment truncate">
-            D&D Beyond — {characterName}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setMinimized((v) => !v)}
-            className="rounded p-1 text-gray-500 transition-colors hover:text-parchment"
-            title={minimized ? 'Expand' : 'Minimize'}
-          >
-            {minimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
-          </button>
-          <button
-            onClick={onClose}
-            className="rounded p-1 text-gray-500 transition-colors hover:text-red-400"
-            title="Close"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
-
-      {/* iframe content */}
-      {!minimized && (
-        <>
-          <iframe
-            ref={iframeRef}
-            src={`https://www.dndbeyond.com/characters/${characterId}`}
-            className="flex-1 rounded-b-xl"
-            title="D&D Beyond Character Sheet"
-            sandbox="allow-scripts allow-same-origin allow-popups"
-          />
-          {/* Resize edges */}
-          <div className="absolute inset-0 pointer-events-none">
-            {/* Edges */}
-            <div className="absolute -top-1 left-2 right-2 h-2 cursor-ns-resize pointer-events-auto" onPointerDown={onEdgeDown({ top: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
-            <div className="absolute -bottom-1 left-2 right-2 h-2 cursor-ns-resize pointer-events-auto" onPointerDown={onEdgeDown({ bottom: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
-            <div className="absolute -left-1 top-2 bottom-2 w-2 cursor-ew-resize pointer-events-auto" onPointerDown={onEdgeDown({ left: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
-            <div className="absolute -right-1 top-2 bottom-2 w-2 cursor-ew-resize pointer-events-auto" onPointerDown={onEdgeDown({ right: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
-            {/* Corners */}
-            <div className="absolute -top-1 -left-1 h-3 w-3 cursor-nwse-resize pointer-events-auto" onPointerDown={onEdgeDown({ top: true, left: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
-            <div className="absolute -top-1 -right-1 h-3 w-3 cursor-nesw-resize pointer-events-auto" onPointerDown={onEdgeDown({ top: true, right: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
-            <div className="absolute -bottom-1 -left-1 h-3 w-3 cursor-nesw-resize pointer-events-auto" onPointerDown={onEdgeDown({ bottom: true, left: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
-            <div className="absolute -bottom-1 -right-1 h-3 w-3 cursor-nwse-resize pointer-events-auto" onPointerDown={onEdgeDown({ bottom: true, right: true })} onPointerMove={onEdgeMove} onPointerUp={onEdgeUp} />
-          </div>
-        </>
-      )}
-    </div>
-  )
+  localStorage.setItem(DNDB_WINDOW_KEY, JSON.stringify({ x, y, w, h }))
 }

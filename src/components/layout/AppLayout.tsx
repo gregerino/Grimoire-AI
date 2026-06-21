@@ -1,5 +1,5 @@
 import { Outlet, Link } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { LogOut, BookOpen } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import logo from '@/assets/logo.png'
 
@@ -16,6 +16,13 @@ export function AppLayout() {
           </Link>
 
           <div className="flex items-center gap-3">
+            <Link
+              to="/rulebooks"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-400 hover:bg-navy hover:text-gold transition-colors"
+            >
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Rulebooks</span>
+            </Link>
             {user?.user_metadata?.avatar_url && (
               <img
                 src={user.user_metadata.avatar_url}

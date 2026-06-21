@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import crypto from 'crypto'
 import { supabaseAdmin } from '../lib/supabase-admin'
+import { withRetry } from '../lib/retry'
 import { buildSystemPrompt, MAX_HISTORY_MESSAGES, MAX_RESPONSE_TOKENS, type WorldContext } from '../prompts/dm-system'
 import type { Campaign, AiProvider } from '../../src/types/database'
 
@@ -78,7 +79,7 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
         .select('*')
         .eq('id', campaign_id)
         .single(),
-      getRAGContext(message, campaign_id),
+      getRAGContext(message, campaign_id, req.body.user_id),
       supabaseAdmin
         .from('campaign_memories')
         .select('content, category, importance')
@@ -229,19 +230,33 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
 async function getRAGContext(
   query: string,
   campaignId: string,
+  userId?: string,
 ): Promise<string> {
   try {
-    const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: query,
-    })
+    const embeddingResponse = await withRetry(
+      () => openai.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: query,
+      }),
+      { maxRetries: 2, timeoutMs: 15_000 },
+    )
     const queryEmbedding = embeddingResponse.data[0].embedding
 
-    const { data: ragResults } = await supabaseAdmin.rpc('match_documents', {
-      query_embedding: JSON.stringify(queryEmbedding),
-      match_campaign_id: campaignId,
-      match_count: 5,
-    })
+    const rpcName = userId ? 'match_documents_with_rulebooks' : 'match_documents'
+    const rpcParams = userId
+      ? {
+          query_embedding: JSON.stringify(queryEmbedding),
+          match_campaign_id: campaignId,
+          match_user_id: userId,
+          match_count: 8,
+        }
+      : {
+          query_embedding: JSON.stringify(queryEmbedding),
+          match_campaign_id: campaignId,
+          match_count: 5,
+        }
+
+    const { data: ragResults } = await supabaseAdmin.rpc(rpcName, rpcParams)
 
     if (!ragResults || ragResults.length === 0) return ''
 
@@ -860,14 +875,17 @@ function generateNpcPortraitAsync(npc: {
       const promptHash = crypto.createHash('sha256').update(prompt).digest('hex').slice(0, 16)
 
       try {
-        const response = await openai.images.generate({
-          model: 'dall-e-3',
-          prompt,
-          n: 1,
-          size: '1024x1024',
-          quality: 'standard',
-          response_format: 'b64_json',
-        })
+        const response = await withRetry(
+          () => openai.images.generate({
+            model: 'dall-e-3',
+            prompt,
+            n: 1,
+            size: '1024x1024',
+            quality: 'standard',
+            response_format: 'b64_json',
+          }),
+          { maxRetries: 2, timeoutMs: 60_000 },
+        )
 
         const b64 = response.data[0].b64_json
         if (!b64) return
@@ -925,14 +943,17 @@ function generateLocationImageAsync(location: {
       const promptHash = crypto.createHash('sha256').update(prompt).digest('hex').slice(0, 16)
 
       try {
-        const response = await openai.images.generate({
-          model: 'dall-e-3',
-          prompt,
-          n: 1,
-          size: '1792x1024',
-          quality: 'standard',
-          response_format: 'b64_json',
-        })
+        const response = await withRetry(
+          () => openai.images.generate({
+            model: 'dall-e-3',
+            prompt,
+            n: 1,
+            size: '1792x1024',
+            quality: 'standard',
+            response_format: 'b64_json',
+          }),
+          { maxRetries: 2, timeoutMs: 60_000 },
+        )
 
         const b64 = response.data[0].b64_json
         if (!b64) return

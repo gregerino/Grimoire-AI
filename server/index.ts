@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import { initServerSentry, Sentry } from './lib/sentry'
 import { pdfRoutes } from './routes/pdf'
 import { ragRoutes } from './routes/rag'
 import { chatRoutes } from './routes/chat'
@@ -16,8 +17,10 @@ import { travelRoutes } from './routes/travel'
 import { memoryRoutes } from './routes/memory'
 import { tavernRoutes } from './routes/tavern'
 import { lootRoutes } from './routes/loot'
+import { rulebookRoutes } from './routes/rulebook'
 
 dotenv.config()
+initServerSentry()
 
 const app = express()
 const PORT = process.env.SERVER_PORT || 3001
@@ -40,12 +43,14 @@ app.use('/api/travel', travelRoutes)
 app.use('/api/memory', memoryRoutes)
 app.use('/api/tavern', tavernRoutes)
 app.use('/api/loot', lootRoutes)
+app.use('/api/rulebook', rulebookRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
-// Catch-all error handler — always return JSON, never HTML
+Sentry.setupExpressErrorHandler(app)
+
 app.use((err: Error, _req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
   console.error('Unhandled error:', err.message)
   res.status(500).json({ error: err.message || 'Internal server error' })

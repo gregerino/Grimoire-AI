@@ -116,6 +116,50 @@ export async function ragSearch(query: string, campaignId: string) {
   return res.json()
 }
 
+// --- Rulebooks ---
+
+export async function uploadRulebook(file: File, userId: string) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('user_id', userId)
+
+  const res = await fetch(`${API_BASE}/rulebook/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    let msg = 'Upload failed'
+    try {
+      msg = JSON.parse(text).error || msg
+    } catch {
+      msg = text.startsWith('<') ? `Server returned HTML (status ${res.status})` : text
+    }
+    throw new Error(msg)
+  }
+
+  return res.json()
+}
+
+export async function listRulebooks(userId: string) {
+  const res = await fetch(`${API_BASE}/rulebook/list/${userId}`)
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.error || 'Failed to list rulebooks')
+  }
+  return res.json()
+}
+
+export async function deleteRulebook(rulebookId: string) {
+  const res = await fetch(`${API_BASE}/rulebook/${rulebookId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.error || 'Failed to delete rulebook')
+  }
+  return res.json()
+}
+
 export interface GameState {
   hpChange?: number
   conditionsAdded?: string[]
@@ -435,6 +479,7 @@ export async function sendChatMessage(
   provider?: 'claude' | 'openai',
   ttsLanguage?: string,
   onSpeechSegments?: (segments: SpeechSegment[]) => void,
+  userId?: string,
 ) {
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
@@ -446,6 +491,7 @@ export async function sendChatMessage(
       history,
       ...(provider && { provider }),
       ...(ttsLanguage && { ttsLanguage }),
+      ...(userId && { user_id: userId }),
     }),
   })
 

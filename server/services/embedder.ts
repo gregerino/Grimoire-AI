@@ -51,3 +51,32 @@ export async function embedAndStore(
     }
   }
 }
+
+export async function embedAndStoreRulebook(
+  chunks: Chunk[],
+  rulebookId: string,
+  userId: string
+): Promise<void> {
+  const texts = chunks.map((c) => c.content)
+  const embeddings = await generateEmbeddings(texts)
+
+  const rows = chunks.map((chunk, i) => ({
+    rulebook_id: rulebookId,
+    user_id: userId,
+    content: chunk.content,
+    embedding: JSON.stringify(embeddings[i]),
+    metadata: chunk.metadata,
+  }))
+
+  const insertBatchSize = 50
+  for (let i = 0; i < rows.length; i += insertBatchSize) {
+    const batch = rows.slice(i, i + insertBatchSize)
+    const { error } = await supabaseAdmin
+      .from('rulebook_chunks')
+      .insert(batch)
+
+    if (error) {
+      throw new Error(`Failed to insert rulebook chunks: ${error.message}`)
+    }
+  }
+}

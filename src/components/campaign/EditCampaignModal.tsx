@@ -27,6 +27,7 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: Props)
     setting: '',
     character_name: '',
     character_class: '',
+    dm_notes: '',
     status: 'active' as Campaign['status'],
     image_generation_enabled: true,
   })
@@ -39,6 +40,7 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: Props)
         setting: campaign.setting ?? '',
         character_name: campaign.character_name ?? '',
         character_class: campaign.character_class ?? '',
+        dm_notes: campaign.dm_notes ?? '',
         status: campaign.status,
         image_generation_enabled: campaign.image_generation_enabled ?? true,
       })
@@ -123,6 +125,20 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: Props)
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gold">DM Notes</label>
+            <textarea
+              className={inputClass + ' resize-none'}
+              rows={4}
+              placeholder="Instructions for the DM AI — tone, themes, house rules, special constraints, backstory hooks..."
+              value={form.dm_notes}
+              onChange={(e) => setForm({ ...form, dm_notes: e.target.value })}
+            />
+            <p className="mt-1 text-[10px] text-gray-600">
+              These notes guide the AI dungeon master throughout the campaign.
+            </p>
           </div>
 
           <div>

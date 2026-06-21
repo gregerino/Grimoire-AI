@@ -2,13 +2,13 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { Campaign } from '@/types/database'
 
-type CampaignEditable = Partial<Pick<Campaign, 'name' | 'description' | 'setting' | 'character_name' | 'character_class' | 'status'>>
+type CampaignEditable = Partial<Pick<Campaign, 'name' | 'description' | 'setting' | 'character_name' | 'character_class' | 'dm_notes' | 'status'>>
 
 interface CampaignState {
   campaigns: Campaign[]
   loading: boolean
   fetchCampaigns: () => Promise<void>
-  createCampaign: (campaign: Pick<Campaign, 'name' | 'description' | 'setting' | 'character_name' | 'character_class'>) => Promise<Campaign | null>
+  createCampaign: (campaign: Pick<Campaign, 'name' | 'description' | 'setting' | 'character_name' | 'character_class' | 'dm_notes'>) => Promise<Campaign | null>
   updateCampaign: (id: string, updates: CampaignEditable) => Promise<Campaign | null>
   deleteCampaign: (id: string) => Promise<void>
 }

@@ -1,7 +1,26 @@
 const { app, BrowserWindow } = require('electron')
 const path = require('path')
+const Sentry = require('@sentry/node')
 
 const isDev = process.env.NODE_ENV === 'development'
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: isDev ? 'development' : 'production',
+    release: process.env.APP_VERSION || '0.1.0',
+  })
+}
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error)
+  Sentry.captureException(error)
+})
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason)
+  Sentry.captureException(reason)
+})
 
 function createWindow() {
   const win = new BrowserWindow({

@@ -23,6 +23,7 @@ export function CreateCampaignModal({ open, onClose, onCreated }: Props) {
     setting: '',
     character_name: '',
     character_class: '',
+    dm_notes: '',
   })
 
   if (!open) return null
@@ -36,7 +37,7 @@ export function CreateCampaignModal({ open, onClose, onCreated }: Props) {
     if (campaign) {
       onCreated(campaign.id)
       onClose()
-      setForm({ name: '', description: '', setting: '', character_name: '', character_class: '' })
+      setForm({ name: '', description: '', setting: '', character_name: '', character_class: '', dm_notes: '' })
     }
   }
 
@@ -108,6 +109,20 @@ export function CreateCampaignModal({ open, onClose, onCreated }: Props) {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gold">DM Notes</label>
+            <textarea
+              className={inputClass + ' resize-none'}
+              rows={4}
+              placeholder="Instructions for the DM AI — tone, themes, house rules, special constraints, backstory hooks..."
+              value={form.dm_notes}
+              onChange={(e) => setForm({ ...form, dm_notes: e.target.value })}
+            />
+            <p className="mt-1 text-[10px] text-gray-600">
+              These notes guide the AI dungeon master throughout the campaign.
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
