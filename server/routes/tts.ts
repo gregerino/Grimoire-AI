@@ -5,7 +5,7 @@ const INWORLD_BASE = 'https://api.inworld.ai'
 
 export const ttsRoutes = Router()
 
-const DEFAULT_VOICE_ID = 'Graham'
+const DEFAULT_VOICE_ID = 'lime-fern-6875__amelia_tyler_bg3'
 const DEFAULT_MODEL_ID = 'inworld-tts-2'
 
 function resolveVoiceId(speaker: string, overrideVoiceId?: string): string {

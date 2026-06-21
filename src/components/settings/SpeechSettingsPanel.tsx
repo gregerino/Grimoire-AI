@@ -96,7 +96,7 @@ export function SpeechSettingsPanel() {
                   onChange={(e) => setDefaultVoiceId(e.target.value || null)}
                   className="w-full rounded border border-navy bg-dark-navy px-2 py-1.5 text-xs text-parchment focus:border-gold/50 focus:outline-none"
                 >
-                  <option value="">Sarah (standard)</option>
+                  <option value="">Amelia Tyler / BG3 (standard)</option>
                   {voices.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.name} {v.description ? `— ${v.description}` : ''}

@@ -69,7 +69,7 @@ export function useSpeech() {
       objectUrlRef.current = url
 
       const audio = new Audio(url)
-      audio.playbackRate = 1.2
+      audio.playbackRate = 1.0
       audioRef.current = audio
 
       await new Promise<void>((resolve) => {
