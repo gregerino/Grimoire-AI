@@ -2,10 +2,12 @@ import { useState } from 'react'
 import {
   Plus, Trash2, X, CheckCircle, Circle, XCircle,
   MessageCircle, ChevronDown, ChevronRight, MapPin, User,
-  Award, Coins, Star,
+  Award, Coins, Star, Filter,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRealtimeTable } from '@/hooks/useRealtimeTable'
+import { Badge } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/EmptyState'
 import type { Quest } from '@/types/database'
 
 interface Props {
@@ -13,22 +15,25 @@ interface Props {
 }
 
 const statusConfig = {
-  rumor: { icon: MessageCircle, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', label: 'Rumor' },
-  active: { icon: Circle, color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20', label: 'Active' },
-  completed: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20', label: 'Completed' },
-  failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/20', label: 'Failed' },
+  rumor: { icon: MessageCircle, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20', label: 'Rumor', accent: 'border-l-amber-400' },
+  active: { icon: Circle, color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20', label: 'Active', accent: 'border-l-blue-400' },
+  completed: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20', label: 'Completed', accent: 'border-l-green-400' },
+  failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/20', label: 'Failed', accent: 'border-l-red-400' },
 }
 
 const priorityBadge = {
-  main: 'bg-gold/20 text-gold',
-  side: 'bg-blue-400/20 text-blue-400',
-  personal: 'bg-purple-400/20 text-purple-400',
+  main: { variant: 'gold' as const, label: 'Main' },
+  side: { variant: 'default' as const, label: 'Side' },
+  personal: { variant: 'mystic' as const, label: 'Personal' },
 }
 
+type StatusFilter = Quest['status'] | 'all'
+
 export function QuestTab({ campaignId }: Props) {
-  const { rows: quests, loading } = useRealtimeTable<Quest>({ table: 'quests', campaignId })
+  const { rows: quests, setRows, loading } = useRealtimeTable<Quest>({ table: 'quests', campaignId })
   const [showForm, setShowForm] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -78,14 +83,41 @@ export function QuestTab({ campaignId }: Props) {
 
   const rumors = quests.filter((q) => q.status === 'rumor')
   const active = quests.filter((q) => q.status === 'active')
-  const done = quests.filter((q) => q.status === 'completed' || q.status === 'failed')
+  const completed = quests.filter((q) => q.status === 'completed')
+  const failed = quests.filter((q) => q.status === 'failed')
+
+  const sections = [
+    { key: 'active', title: 'Active Quests', quests: active, icon: Circle },
+    { key: 'rumor', title: 'Rumors & Whispers', quests: rumors, icon: MessageCircle },
+    { key: 'completed', title: 'Completed', quests: completed, icon: CheckCircle },
+    { key: 'failed', title: 'Failed', quests: failed, icon: XCircle },
+  ].filter((s) => statusFilter === 'all' || s.key === statusFilter)
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-500">
-          {rumors.length} rumors · {active.length} active · {done.length} done
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-medium text-gray-500">
+            {active.length} active · {rumors.length} rumors
+          </h3>
+          {quests.length > 0 && (
+            <div className="flex items-center gap-1">
+              <Filter className="h-3 w-3 text-gray-600" />
+              {(['all', 'active', 'rumor', 'completed', 'failed'] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`rounded px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                    statusFilter === s ? 'bg-navy text-parchment' : 'text-gray-600 hover:text-gray-400'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="inline-flex items-center gap-1 rounded-lg bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold hover:bg-gold/20 transition-colors"
@@ -95,6 +127,7 @@ export function QuestTab({ campaignId }: Props) {
         </button>
       </div>
 
+      {/* Add form */}
       {showForm && (
         <form onSubmit={handleAdd} className="space-y-3 rounded-xl border border-navy bg-dark-navy p-4">
           <input className={inputClass} placeholder="Quest title *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
@@ -114,58 +147,50 @@ export function QuestTab({ campaignId }: Props) {
         </form>
       )}
 
+      {/* Quest sections */}
       {quests.length === 0 ? (
-        <p className="py-4 text-center text-sm text-gray-600">No quests yet. Rumors will appear as NPCs share whispers and secrets.</p>
+        <EmptyState
+          icon={<ScrollIcon className="h-10 w-10" />}
+          title="No Quests Yet"
+          description="Rumors will appear as NPCs share whispers and secrets. You can also add quests manually."
+          cta="Add First Quest"
+          onAction={() => setShowForm(true)}
+        />
       ) : (
-        <div className="space-y-3">
-          <QuestSection title="Rumors" quests={rumors} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onSetPriority={setPriority} onDelete={handleDelete} />
-          <QuestSection title="Active Quests" quests={active} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onSetPriority={setPriority} onDelete={handleDelete} />
-          {done.length > 0 && (
-            <QuestSection title="Completed / Failed" quests={done} expandedId={expandedId} onToggle={setExpandedId} onSetStatus={setStatus} onSetPriority={setPriority} onDelete={handleDelete} />
-          )}
+        <div className="space-y-6">
+          {sections.map(({ key, title, quests: sectionQuests, icon: SectionIcon }) => {
+            if (sectionQuests.length === 0) return null
+            return (
+              <div key={key}>
+                <div className="mb-2.5 flex items-center gap-2">
+                  <SectionIcon className={`h-3.5 w-3.5 ${statusConfig[key as Quest['status']]?.color ?? 'text-gray-500'}`} />
+                  <h4 className="text-xs font-medium uppercase tracking-wider text-gray-500">{title}</h4>
+                  <span className="text-[10px] text-gray-600">({sectionQuests.length})</span>
+                </div>
+                <div className="space-y-2">
+                  {sectionQuests.map((quest) => (
+                    <QuestCard
+                      key={quest.id}
+                      quest={quest}
+                      expanded={expandedId === quest.id}
+                      onToggle={() => setExpandedId(expandedId === quest.id ? null : quest.id)}
+                      onSetStatus={setStatus}
+                      onSetPriority={setPriority}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
 
-function QuestSection({
-  title,
-  quests,
-  expandedId,
-  onToggle,
-  onSetStatus,
-  onSetPriority,
-  onDelete,
-}: {
-  title: string
-  quests: Quest[]
-  expandedId: string | null
-  onToggle: (id: string | null) => void
-  onSetStatus: (q: Quest, s: Quest['status']) => void
-  onSetPriority: (q: Quest, p: Quest['priority']) => void
-  onDelete: (id: string) => void
-}) {
-  if (quests.length === 0) return null
-
-  return (
-    <div>
-      <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">{title}</h4>
-      <div className="space-y-2">
-        {quests.map((quest) => (
-          <QuestCard
-            key={quest.id}
-            quest={quest}
-            expanded={expandedId === quest.id}
-            onToggle={() => onToggle(expandedId === quest.id ? null : quest.id)}
-            onSetStatus={onSetStatus}
-            onSetPriority={onSetPriority}
-            onDelete={onDelete}
-          />
-        ))}
-      </div>
-    </div>
-  )
+function ScrollIcon({ className }: { className?: string }) {
+  return <MessageCircle className={className} />
 }
 
 function QuestCard({
@@ -186,26 +211,27 @@ function QuestCard({
   const config = statusConfig[quest.status]
   const Icon = config.icon
   const isDone = quest.status === 'completed' || quest.status === 'failed'
+  const pBadge = priorityBadge[quest.priority]
 
   return (
-    <div className={`rounded-xl border ${config.bg} ${isDone ? 'opacity-60' : ''}`}>
+    <div className={`rounded-xl border border-l-4 ${config.bg} ${config.accent} ${isDone ? 'opacity-60' : ''} transition-all`}>
       <div className="flex items-start justify-between p-3">
         <div className="flex items-start gap-2.5 min-w-0 flex-1">
-          <button onClick={onToggle} className="mt-0.5 text-gray-500 hover:text-parchment">
+          <button onClick={onToggle} className="mt-0.5 text-gray-500 hover:text-parchment transition-colors">
             {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
           </button>
           <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${config.color}`} />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`font-medium text-sm ${isDone ? 'text-gray-500 line-through' : 'text-parchment'}`}>
                 {quest.title}
               </span>
-              <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ${priorityBadge[quest.priority]}`}>
-                {quest.priority}
-              </span>
+              <Badge variant={pBadge.variant} size="sm">{pBadge.label}</Badge>
             </div>
             {quest.description && !expanded && (
-              <p className="mt-0.5 text-xs text-gray-500 truncate">{quest.description}</p>
+              <p className={`mt-0.5 text-xs truncate ${quest.status === 'rumor' ? 'text-gray-500 italic' : 'text-gray-500'}`}>
+                {quest.status === 'rumor' ? `"${quest.description}"` : quest.description}
+              </p>
             )}
           </div>
         </div>
@@ -217,7 +243,9 @@ function QuestCard({
       {expanded && (
         <div className="border-t border-navy/50 px-4 pb-3 pt-2 space-y-3">
           {quest.description && (
-            <p className="text-sm text-gray-400 leading-relaxed">{quest.description}</p>
+            <p className={`text-sm leading-relaxed ${quest.status === 'rumor' ? 'text-gray-400 italic' : 'text-gray-400'}`}>
+              {quest.status === 'rumor' ? `"${quest.description}"` : quest.description}
+            </p>
           )}
 
           {quest.reward && (
@@ -251,12 +279,15 @@ function QuestCard({
             </div>
           )}
 
+          {/* Quest timeline */}
           {quest.updates && quest.updates.length > 0 && (
             <div className="space-y-1.5">
               <h5 className="text-xs font-medium text-gray-500">Quest Log</h5>
-              <div className="space-y-1 border-l-2 border-navy pl-3">
+              <div className="relative space-y-2 pl-4">
+                <div className="absolute left-[5px] top-1 bottom-1 w-px bg-navy" />
                 {quest.updates.map((u, i) => (
-                  <div key={i} className="text-xs">
+                  <div key={i} className="relative text-xs">
+                    <div className="absolute -left-[11px] top-1.5 h-2 w-2 rounded-full bg-navy border border-gray-600" />
                     <span className="text-gray-600">{new Date(u.timestamp).toLocaleDateString()}</span>
                     <span className="ml-2 text-gray-400">{u.text}</span>
                   </div>
@@ -313,4 +344,3 @@ function QuestCard({
     </div>
   )
 }
-

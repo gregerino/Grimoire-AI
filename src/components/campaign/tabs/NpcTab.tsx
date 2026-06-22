@@ -1,25 +1,43 @@
-import { useState } from 'react'
-import { Plus, Trash2, Skull, Heart, X } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Plus, Search, X, Skull, Heart, MapPin, MessageCircle } from 'lucide-react'
+import Fuse from 'fuse.js'
 import { supabase } from '@/lib/supabase'
 import { useRealtimeTable } from '@/hooks/useRealtimeTable'
 import { NpcDetailModal } from '@/components/campaign/NpcDetailModal'
+import { Badge } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/EmptyState'
 import type { Npc } from '@/types/database'
 
 interface Props {
   campaignId: string
 }
 
-const dispositionColors = {
-  friendly: 'text-green-400',
-  neutral: 'text-gray-400',
-  hostile: 'text-red-400',
+const dispositionConfig = {
+  friendly: { dot: 'bg-green-400', variant: 'success' as const, label: 'Friendly' },
+  neutral: { dot: 'bg-gray-400', variant: 'default' as const, label: 'Neutral' },
+  hostile: { dot: 'bg-red-400', variant: 'blood' as const, label: 'Hostile' },
 }
 
 export function NpcTab({ campaignId }: Props) {
   const { rows: npcs, setRows: setNpcs, loading } = useRealtimeTable<Npc>({ table: 'npcs', campaignId })
   const [showForm, setShowForm] = useState(false)
   const [selectedNpc, setSelectedNpc] = useState<Npc | null>(null)
+  const [search, setSearch] = useState('')
+  const [filterDisposition, setFilterDisposition] = useState<Npc['disposition'] | 'all'>('all')
   const [form, setForm] = useState({ name: '', description: '', race: '', occupation: '', disposition: 'neutral' as const })
+
+  const fuse = useMemo(
+    () => new Fuse(npcs, { keys: ['name', 'race', 'occupation', 'location', 'description'], threshold: 0.3 }),
+    [npcs],
+  )
+
+  const filtered = useMemo(() => {
+    let result = search.trim() ? fuse.search(search).map((r) => r.item) : npcs
+    if (filterDisposition !== 'all') {
+      result = result.filter((n) => n.disposition === filterDisposition)
+    }
+    return result
+  }, [npcs, search, filterDisposition, fuse])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,12 +47,9 @@ export function NpcTab({ campaignId }: Props) {
     setShowForm(false)
   }
 
-  const toggleAlive = async (npc: Npc) => {
+  const toggleAlive = async (e: React.MouseEvent, npc: Npc) => {
+    e.stopPropagation()
     await supabase.from('npcs').update({ is_alive: !npc.is_alive }).eq('id', npc.id)
-  }
-
-  const handleDelete = async (id: string) => {
-    await supabase.from('npcs').delete().eq('id', id)
   }
 
   const inputClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/40 transition-colors'
@@ -43,17 +58,59 @@ export function NpcTab({ campaignId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-500">{npcs.length} NPCs</h3>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-1 rounded-lg bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold hover:bg-gold/20 transition-colors"
-        >
-          {showForm ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-          {showForm ? 'Cancel' : 'Add NPC'}
-        </button>
+      {/* Header with search and filters */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-gray-500">{npcs.length} NPCs</h3>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center gap-1 rounded-lg bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold hover:bg-gold/20 transition-colors"
+          >
+            {showForm ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+            {showForm ? 'Cancel' : 'Add NPC'}
+          </button>
+        </div>
+
+        {npcs.length > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
+              <input
+                type="text"
+                className={inputClass + ' pl-9'}
+                placeholder="Search NPCs..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <div className="flex gap-1">
+              {(['all', 'friendly', 'neutral', 'hostile'] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setFilterDisposition(d)}
+                  className={`rounded-lg px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                    filterDisposition === d
+                      ? 'bg-navy text-parchment'
+                      : 'text-gray-600 hover:text-gray-400'
+                  }`}
+                >
+                  {d === 'all' ? 'All' : d}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Add form */}
       {showForm && (
         <form onSubmit={handleAdd} className="space-y-3 rounded-xl border border-navy bg-dark-navy p-4">
           <input className={inputClass} placeholder="Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -73,54 +130,26 @@ export function NpcTab({ campaignId }: Props) {
         </form>
       )}
 
+      {/* NPC Cards */}
       {npcs.length === 0 ? (
-        <p className="py-4 text-center text-sm text-gray-600">No NPCs encountered yet.</p>
+        <EmptyState
+          icon={<MessageCircle className="h-10 w-10" />}
+          title="No NPCs Encountered"
+          description="Characters you meet on your journey will appear here. Add them manually or let the DM create them during play."
+          cta="Add First NPC"
+          onAction={() => setShowForm(true)}
+        />
+      ) : filtered.length === 0 ? (
+        <p className="py-4 text-center text-sm text-gray-600">No NPCs match your search.</p>
       ) : (
-        <div className="space-y-2">
-          {npcs.map((npc) => (
-            <div
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {filtered.map((npc) => (
+            <NpcCard
               key={npc.id}
-              className={`cursor-pointer rounded-xl border border-navy bg-dark-navy p-4 transition-all hover:border-gold/20 ${!npc.is_alive ? 'opacity-50' : ''}`}
+              npc={npc}
               onClick={() => setSelectedNpc(npc)}
-            >
-              <div className="flex items-start gap-3">
-                {npc.portrait_url && (
-                  <img
-                    src={npc.portrait_url}
-                    alt={npc.name}
-                    className="h-10 w-10 shrink-0 rounded-lg object-cover border border-navy"
-                    loading="lazy"
-                  />
-                )}
-                <div className="flex flex-1 items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-parchment">{npc.name}</span>
-                    <span className={`text-xs ${dispositionColors[npc.disposition]}`}>
-                      {npc.disposition}
-                    </span>
-                    {!npc.is_alive && <span className="text-xs text-red-400">(dead)</span>}
-                  </div>
-                  {(npc.race || npc.occupation) && (
-                    <div className="mt-0.5 text-xs text-gray-500">
-                      {[npc.race, npc.occupation].filter(Boolean).join(' · ')}
-                    </div>
-                  )}
-                  {npc.description && (
-                    <p className="mt-1 text-sm text-gray-400 line-clamp-2">{npc.description}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => toggleAlive(npc)} className="rounded p-1.5 text-gray-500 hover:bg-navy transition-colors" title={npc.is_alive ? 'Mark as dead' : 'Revive'}>
-                    {npc.is_alive ? <Skull className="h-3.5 w-3.5" /> : <Heart className="h-3.5 w-3.5" />}
-                  </button>
-                  <button onClick={() => handleDelete(npc.id)} className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-red-400 transition-colors">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-              </div>
-            </div>
+              onToggleAlive={toggleAlive}
+            />
           ))}
         </div>
       )}
@@ -136,6 +165,76 @@ export function NpcTab({ campaignId }: Props) {
           }}
         />
       )}
+    </div>
+  )
+}
+
+function NpcCard({ npc, onClick, onToggleAlive }: { npc: Npc; onClick: () => void; onToggleAlive: (e: React.MouseEvent, npc: Npc) => void }) {
+  const config = dispositionConfig[npc.disposition]
+
+  return (
+    <div
+      onClick={onClick}
+      className={`group cursor-pointer rounded-xl border border-navy bg-dark-navy p-4 transition-all hover:border-gold/20 hover:shadow-card-hover ${!npc.is_alive ? 'opacity-50' : ''}`}
+    >
+      <div className="flex gap-3">
+        {/* Portrait */}
+        {npc.portrait_url ? (
+          <img
+            src={npc.portrait_url}
+            alt={npc.name}
+            className="h-20 w-20 shrink-0 rounded-lg object-cover border border-navy"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border border-navy bg-midnight text-2xl font-display text-gold/30">
+            {npc.name.charAt(0)}
+          </div>
+        )}
+
+        {/* Info */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 shrink-0 rounded-full ${config.dot}`} />
+            <span className="font-medium text-parchment truncate">{npc.name}</span>
+            {!npc.is_alive && <span className="text-[10px] text-red-400">(dead)</span>}
+          </div>
+
+          <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+            {[npc.race, npc.occupation].filter(Boolean).join(' · ') || <span className="italic">Unknown</span>}
+          </div>
+
+          {npc.location && (
+            <div className="mt-1 flex items-center gap-1 text-xs text-blue-400/70">
+              <MapPin className="h-3 w-3" />
+              <span className="truncate">{npc.location}</span>
+            </div>
+          )}
+
+          {npc.description && (
+            <p className="mt-1.5 text-xs text-gray-500 line-clamp-2 leading-relaxed italic">
+              &ldquo;{npc.description}&rdquo;
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Footer tags */}
+      <div className="mt-3 flex items-center justify-between">
+        <div className="flex gap-1.5">
+          <Badge variant={config.variant} size="sm" dot>{config.label}</Badge>
+          {npc.relationship && (
+            <Badge variant="mystic" size="sm">{npc.relationship}</Badge>
+          )}
+        </div>
+        <button
+          onClick={(e) => onToggleAlive(e, npc)}
+          className="rounded p-1.5 text-gray-600 opacity-0 group-hover:opacity-100 hover:bg-navy transition-all"
+          title={npc.is_alive ? 'Mark as dead' : 'Revive'}
+        >
+          {npc.is_alive ? <Skull className="h-3.5 w-3.5" /> : <Heart className="h-3.5 w-3.5" />}
+        </button>
+      </div>
     </div>
   )
 }
