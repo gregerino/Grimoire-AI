@@ -11,13 +11,13 @@ import { RulebooksPage } from '@/pages/RulebooksPage'
 
 function ErrorFallback() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-950 text-white">
+    <div className="flex items-center justify-center min-h-screen bg-midnight text-parchment">
       <div className="text-center space-y-4 max-w-md px-6">
-        <h1 className="text-2xl font-bold text-red-400">Something went wrong</h1>
-        <p className="text-gray-400">An unexpected error occurred. The error has been reported.</p>
+        <h1 className="text-2xl font-display font-bold text-blood-light">Something went wrong</h1>
+        <p className="text-stone font-body">An unexpected error occurred. The error has been reported.</p>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+          className="px-4 py-2 bg-gold text-dark-navy font-ui font-semibold rounded-lg hover:bg-gold-light transition-colors active:scale-[0.97]"
         >
           Reload
         </button>

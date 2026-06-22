@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { Card } from '@/components/ui/Card'
 import logo from '@/assets/logo.png'
 
 export function LoginPage() {
@@ -22,14 +23,14 @@ export function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <img src={logo} alt="Grimoire" className="mx-auto mb-4 h-28 w-28 drop-shadow-[0_0_15px_rgba(201,168,76,0.3)]" />
-          <h1 className="text-3xl font-bold text-parchment tracking-wide">Grimoire</h1>
-          <p className="mt-2 text-sm text-gray-500">AI Dungeon Master &middot; Solo D&D 5.5e</p>
+          <h1 className="text-3xl font-display font-bold text-parchment tracking-wide">Grimoire</h1>
+          <p className="mt-2 text-sm text-stone font-body">AI Dungeon Master &middot; Solo D&D 5.5e</p>
         </div>
 
-        <div className="rounded-xl border border-navy bg-dark-navy p-6">
+        <Card>
           <button
             onClick={signInWithGoogle}
-            className="flex w-full items-center justify-center gap-3 rounded-lg bg-navy px-4 py-3 text-sm font-medium text-parchment ring-1 ring-gold/20 transition-all hover:bg-gold/10 hover:ring-gold/40 active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-3 rounded-lg bg-navy px-4 py-3 text-sm font-medium text-parchment font-ui ring-1 ring-gold/20 transition-all hover:bg-gold/10 hover:ring-gold/40 active:scale-[0.98] focus-ring"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -40,10 +41,10 @@ export function LoginPage() {
             Continue with Google
           </button>
 
-          <p className="mt-4 text-center text-xs text-gray-600">
+          <p className="mt-4 text-center text-xs text-mist font-body italic">
             Your adventures await beyond the gate...
           </p>
-        </div>
+        </Card>
       </div>
     </div>
   )

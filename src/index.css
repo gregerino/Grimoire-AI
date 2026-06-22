@@ -1,20 +1,63 @@
 @import "tailwindcss";
 
 @theme {
+  /* Primary backgrounds */
   --color-midnight: #0F1629;
   --color-dark-navy: #1A1A2E;
   --color-navy: #16213E;
+  --color-ink: #1A1A2E;
+  --color-shadow: #16213E;
+  --color-dusk: #0F3460;
+
+  /* Accent */
   --color-gold: #C9A84C;
-  --color-gold-light: #D4B86A;
+  --color-gold-light: #E8C97A;
   --color-gold-dim: #8B7535;
-  --color-parchment: #E8DCC8;
-  --color-blood: #8B0000;
+  --color-blood: #8B1A1A;
+  --color-blood-light: #A52A2A;
   --color-mystic: #6B3FA0;
   --color-mystic-light: #8B5FD0;
+  --color-ember: #D4651E;
+
+  /* Neutrals */
+  --color-parchment: #F5E6C8;
+  --color-parchment-dark: #D4C4A0;
+  --color-stone: #8B8B8B;
+  --color-mist: #4A4A6A;
+  --color-ash: #2A2A3E;
+
+  /* Font families */
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Crimson Text', serif;
+  --font-ui: 'Inter', sans-serif;
+
+  /* Shadows */
+  --shadow-glow-gold: 0 0 20px rgba(201, 168, 76, 0.3);
+  --shadow-glow-blood: 0 0 20px rgba(139, 26, 26, 0.3);
+  --shadow-glow-mystic: 0 0 20px rgba(107, 63, 160, 0.3);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 168, 76, 0.15);
+
+  /* Border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* Transitions */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
-  font-family: 'Georgia', 'Times New Roman', serif;
+  font-family: var(--font-ui);
+}
+
+/* Narrative / story text uses Crimson Text */
+.prose-narrative {
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: var(--color-parchment-dark);
 }
 
 ::-webkit-scrollbar {
@@ -40,4 +83,12 @@ body {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Focus ring utility */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-midnight), 0 0 0 4px var(--color-gold);
 }

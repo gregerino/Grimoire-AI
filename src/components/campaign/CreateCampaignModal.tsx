@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
 import { useCampaignStore } from '@/stores/campaignStore'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Textarea'
 
 interface Props {
   open: boolean
@@ -26,8 +29,6 @@ export function CreateCampaignModal({ open, onClose, onCreated }: Props) {
     dm_notes: '',
   })
 
-  if (!open) return null
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return
@@ -41,108 +42,82 @@ export function CreateCampaignModal({ open, onClose, onCreated }: Props) {
     }
   }
 
-  const inputClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/40 focus:ring-1 focus:ring-gold/20 transition-colors'
+  const selectClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2.5 text-sm text-parchment font-ui placeholder:text-mist transition-colors duration-200 hover:border-mist focus-ring focus:border-gold/50 disabled:opacity-40 disabled:cursor-not-allowed'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-xl border border-navy bg-dark-navy shadow-2xl">
-        <div className="flex items-center justify-between border-b border-navy px-5 py-4">
-          <h2 className="text-lg font-bold text-parchment">New Campaign</h2>
-          <button onClick={onClose} className="rounded p-1 text-gray-500 hover:bg-navy hover:text-gray-300">
-            <X className="h-4 w-4" />
-          </button>
+    <Modal open={open} onClose={onClose} title="New Campaign" size="lg">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Campaign Name *"
+          placeholder="The Curse of Strahd..."
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          required
+        />
+
+        <Textarea
+          label="Description"
+          rows={2}
+          placeholder="A dark horror adventure in Barovia..."
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
+
+        <Input
+          label="Setting"
+          placeholder="Forgotten Realms, Eberron, Homebrew..."
+          value={form.setting}
+          onChange={(e) => setForm({ ...form, setting: e.target.value })}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Character Name"
+            placeholder="Thorn Blackwood"
+            value={form.character_name}
+            onChange={(e) => setForm({ ...form, character_name: e.target.value })}
+          />
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-parchment-dark font-ui">Class</label>
+            <select
+              className={selectClass}
+              value={form.character_class}
+              onChange={(e) => setForm({ ...form, character_class: e.target.value })}
+            >
+              <option value="">Select...</option>
+              {CHARACTER_CLASSES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 p-5">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gold">Campaign Name *</label>
-            <input
-              className={inputClass}
-              placeholder="The Curse of Strahd..."
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
-          </div>
+        <div>
+          <Textarea
+            label="DM Notes"
+            rows={4}
+            placeholder="Instructions for the DM AI — tone, themes, house rules, special constraints, backstory hooks..."
+            value={form.dm_notes}
+            onChange={(e) => setForm({ ...form, dm_notes: e.target.value })}
+          />
+          <p className="mt-1 text-[10px] text-mist">
+            These notes guide the AI dungeon master throughout the campaign.
+          </p>
+        </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gold">Description</label>
-            <textarea
-              className={inputClass + ' resize-none'}
-              rows={2}
-              placeholder="A dark horror adventure in Barovia..."
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gold">Setting</label>
-            <input
-              className={inputClass}
-              placeholder="Forgotten Realms, Eberron, Homebrew..."
-              value={form.setting}
-              onChange={(e) => setForm({ ...form, setting: e.target.value })}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gold">Character Name</label>
-              <input
-                className={inputClass}
-                placeholder="Thorn Blackwood"
-                value={form.character_name}
-                onChange={(e) => setForm({ ...form, character_name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gold">Class</label>
-              <select
-                className={inputClass}
-                value={form.character_class}
-                onChange={(e) => setForm({ ...form, character_class: e.target.value })}
-              >
-                <option value="">Select...</option>
-                {CHARACTER_CLASSES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gold">DM Notes</label>
-            <textarea
-              className={inputClass + ' resize-none'}
-              rows={4}
-              placeholder="Instructions for the DM AI — tone, themes, house rules, special constraints, backstory hooks..."
-              value={form.dm_notes}
-              onChange={(e) => setForm({ ...form, dm_notes: e.target.value })}
-            />
-            <p className="mt-1 text-[10px] text-gray-600">
-              These notes guide the AI dungeon master throughout the campaign.
-            </p>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm text-gray-400 hover:bg-navy transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !form.name.trim()}
-              className="rounded-lg bg-gold px-4 py-2 text-sm font-medium text-dark-navy hover:bg-gold-light disabled:opacity-50 transition-colors"
-            >
-              {saving ? 'Creating...' : 'Begin Adventure'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            loading={saving}
+            disabled={!form.name.trim()}
+          >
+            Begin Adventure
+          </Button>
+        </div>
+      </form>
+    </Modal>
   )
 }

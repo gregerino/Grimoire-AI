@@ -6,6 +6,7 @@ import { CampaignCard } from '@/components/campaign/CampaignCard'
 import { CreateCampaignModal } from '@/components/campaign/CreateCampaignModal'
 import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Button } from '@/components/ui/Button'
 import type { Campaign } from '@/types/database'
 
 export function DashboardPage() {
@@ -30,16 +31,12 @@ export function DashboardPage() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-parchment">Your Campaigns</h1>
-          <p className="text-sm text-gray-500">Choose your adventure or forge a new tale</p>
+          <h1 className="text-2xl font-display font-bold text-parchment">Your Campaigns</h1>
+          <p className="text-sm text-stone font-body">Choose your adventure or forge a new tale</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-gold px-4 py-2.5 text-sm font-medium text-dark-navy hover:bg-gold-light transition-colors active:scale-[0.98]"
-        >
-          <Plus className="h-4 w-4" />
+        <Button onClick={() => setShowCreate(true)} icon={<Plus className="h-4 w-4" />}>
           New Campaign
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -48,16 +45,12 @@ export function DashboardPage() {
         </div>
       ) : campaigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-navy py-20">
-          <ScrollText className="mb-4 h-12 w-12 text-gray-700" />
-          <p className="text-lg text-gray-500">No campaigns yet</p>
-          <p className="mb-6 text-sm text-gray-600">Create your first campaign to begin</p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 rounded-lg bg-gold/10 px-4 py-2 text-sm font-medium text-gold ring-1 ring-gold/20 hover:bg-gold/20 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
+          <ScrollText className="mb-4 h-12 w-12 text-mist" />
+          <p className="text-lg text-stone font-display">No campaigns yet</p>
+          <p className="mb-6 text-sm text-mist font-body">Create your first campaign to begin</p>
+          <Button variant="outline" onClick={() => setShowCreate(true)} icon={<Plus className="h-4 w-4" />}>
             New Campaign
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
