@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sentry } from '@/lib/sentry'
 import { useAuth } from '@/hooks/useAuth'
+import { useOnboardingStore } from '@/stores/onboardingStore'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { CampaignPage } from '@/pages/CampaignPage'
@@ -28,6 +31,11 @@ function ErrorFallback() {
 
 export default function App() {
   useAuth()
+  const { completed, loading, checkOnboardingStatus } = useOnboardingStore()
+
+  useEffect(() => {
+    checkOnboardingStatus()
+  }, [checkOnboardingStatus])
 
   return (
     <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
@@ -37,7 +45,7 @@ export default function App() {
           <Route
             element={
               <ProtectedRoute>
-                <AppLayout />
+                {!loading && !completed ? <OnboardingWizard /> : <AppLayout />}
               </ProtectedRoute>
             }
           >

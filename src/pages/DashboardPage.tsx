@@ -7,6 +7,7 @@ import { CreateCampaignModal } from '@/components/campaign/CreateCampaignModal'
 import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
+import { EmptyState } from '@/components/ui/EmptyState'
 import type { Campaign } from '@/types/database'
 
 export function DashboardPage() {
@@ -44,14 +45,13 @@ export function DashboardPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
         </div>
       ) : campaigns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-navy py-20">
-          <ScrollText className="mb-4 h-12 w-12 text-mist" />
-          <p className="text-lg text-stone font-display">No campaigns yet</p>
-          <p className="mb-6 text-sm text-mist font-body">Create your first campaign to begin</p>
-          <Button variant="outline" onClick={() => setShowCreate(true)} icon={<Plus className="h-4 w-4" />}>
-            New Campaign
-          </Button>
-        </div>
+        <EmptyState
+          icon={<ScrollText className="h-12 w-12" />}
+          title="Ingen saga har börjat ännu"
+          description="Skapa din första kampanj och låt äventyret ta form."
+          cta="Börja en ny kampanj"
+          onAction={() => setShowCreate(true)}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {campaigns.map((campaign) => (

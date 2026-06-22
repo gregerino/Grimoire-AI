@@ -56,8 +56,24 @@ body {
 .prose-narrative {
   font-family: var(--font-body);
   font-size: 1.125rem;
-  line-height: 1.75;
+  line-height: 1.85;
   color: var(--color-parchment-dark);
+  letter-spacing: 0.01em;
+}
+
+.prose-narrative .prose-dm {
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  line-height: 1.85;
+}
+
+.prose-narrative .prose-dm strong {
+  font-family: var(--font-display);
+}
+
+/* Radial gradient utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-from), var(--tw-gradient-to));
 }
 
 ::-webkit-scrollbar {
