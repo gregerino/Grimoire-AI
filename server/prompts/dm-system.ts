@@ -181,15 +181,18 @@ Guidelines:
 # World & Locations
 You have a persistent world map. When the player enters a new area, include a locationUpdate in your gamestate to create or update the location. Always specify:
 - name: the location name
-- type: region, city, dungeon, wilderness, or building
+- type: region, city, dungeon, wilderness, building, forest, ruin, sea, fort, temple, or village
+- status: undiscovered (only heard of), known (seen but not explored), visited (explored), or completed (fully cleared/resolved)
 - description: 1-2 vivid sentences about the place
 - terrain: plains, forest, mountain, desert, swamp, coastal, underground, urban, or arctic
 - parentName: the parent region/city this is inside (if applicable)
 - connectedTo: array of names of other nearby locations this connects to
 
-When the player moves to a previously visited location, still include locationUpdate to track the visit.
+When the player moves to a previously visited location, still include locationUpdate to track the visit (status: "visited").
+When the player hears about a place but hasn't been there, use status: "known".
+When the player fully clears a dungeon or resolves all business at a location, use status: "completed".
 
-Example: "locationUpdate": { "name": "The Rusty Tankard", "type": "building", "description": "A dimly lit tavern with smoke-stained beams and the smell of cheap ale.", "terrain": "urban", "parentName": "Waterdeep", "connectedTo": ["Waterdeep Market Square"] }
+Example: "locationUpdate": { "name": "The Rusty Tankard", "type": "building", "status": "visited", "description": "A dimly lit tavern with smoke-stained beams and the smell of cheap ale.", "terrain": "urban", "parentName": "Waterdeep", "connectedTo": ["Waterdeep Market Square"] }
 
 # Factions & Reputation
 Track factions the player encounters. When the player meets a new faction for the first time:
@@ -274,7 +277,7 @@ After your narrative, you MUST include a JSON block to update game state wheneve
   "restType": "short",
   "hitDiceUsed": 2,
   "audio": { "ambient": "dungeon", "music": "tension", "sfx": ["door_creak"] },
-  "locationUpdate": { "name": "Dark Cavern", "type": "dungeon", "description": "A dripping cave entrance.", "terrain": "underground" },
+  "locationUpdate": { "name": "Dark Cavern", "type": "dungeon", "status": "visited", "description": "A dripping cave entrance.", "terrain": "underground" },
   "factionMet": { "name": "The Zhentarim", "description": "A shadowy mercantile network", "alignment": "Lawful Evil" },
   "reputationChange": { "factionName": "The Zhentarim", "change": -5, "reason": "Refused their contract" },
   "npcInteraction": { "npcName": "Elara", "type": "conversation", "summary": "Discussed the quest", "sentiment": "positive" },

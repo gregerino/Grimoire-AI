@@ -324,7 +324,8 @@ interface GameState {
   }
   locationUpdate?: {
     name: string
-    type: 'region' | 'city' | 'dungeon' | 'wilderness' | 'building'
+    type: 'region' | 'city' | 'dungeon' | 'wilderness' | 'building' | 'forest' | 'ruin' | 'sea' | 'fort' | 'temple' | 'village'
+    status?: 'undiscovered' | 'known' | 'visited' | 'completed'
     description?: string
     parentName?: string
     terrain?: string
@@ -631,12 +632,15 @@ async function processGameState(
 
     if (existing) {
       resolvedLocationId = existing.id
+      const resolvedStatus = loc.status || 'visited'
       const locUpdates: Record<string, unknown> = {
-        discovered: true,
-        visit_count: existing.visit_count + 1,
+        discovered: resolvedStatus !== 'undiscovered',
+        visit_count: resolvedStatus === 'visited' ? existing.visit_count + 1 : existing.visit_count,
+        status: resolvedStatus,
       }
       if (loc.description) locUpdates.description = loc.description
       if (loc.terrain) locUpdates.terrain = loc.terrain
+      if (loc.type) locUpdates.type = loc.type
       await supabaseAdmin
         .from('world_locations')
         .update(locUpdates)
@@ -658,16 +662,19 @@ async function processGameState(
         y: Math.random() * 600 + 100,
       }
 
+      const resolvedStatus = loc.status || 'visited'
+
       const { data: newLoc } = await supabaseAdmin
         .from('world_locations')
         .insert({
           campaign_id: campaignId,
           name: loc.name,
           type: loc.type || 'building',
+          status: resolvedStatus,
           parent_id: parentId,
           description: loc.description || null,
-          discovered: true,
-          visit_count: 1,
+          discovered: resolvedStatus !== 'undiscovered',
+          visit_count: resolvedStatus === 'visited' ? 1 : 0,
           coordinates_x: coords.x,
           coordinates_y: coords.y,
           terrain: loc.terrain || null,

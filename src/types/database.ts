@@ -179,7 +179,8 @@ export interface RagResult {
   }
 }
 
-export type LocationType = 'region' | 'city' | 'dungeon' | 'wilderness' | 'building'
+export type LocationType = 'region' | 'city' | 'dungeon' | 'wilderness' | 'building' | 'forest' | 'ruin' | 'sea' | 'fort' | 'temple' | 'village'
+export type LocationStatus = 'undiscovered' | 'known' | 'visited' | 'completed'
 export type TerrainType = 'plains' | 'forest' | 'mountain' | 'desert' | 'swamp' | 'coastal' | 'underground' | 'urban' | 'arctic'
 export type ReputationTier = 'enemy' | 'unfriendly' | 'neutral' | 'friendly' | 'honored' | 'exalted'
 export type InteractionType = 'conversation' | 'combat' | 'trade' | 'quest' | 'other'
@@ -189,6 +190,7 @@ export interface WorldLocation {
   campaign_id: string
   name: string
   type: LocationType
+  status: LocationStatus
   parent_id: string | null
   description: string | null
   discovered: boolean
@@ -199,6 +201,7 @@ export interface WorldLocation {
   connected_locations: string[]
   npcs: string[]
   active_quests: string[]
+  notes: string[]
   terrain: TerrainType | null
   danger_level: number
   created_at: string
