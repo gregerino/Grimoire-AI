@@ -47,9 +47,7 @@
       "gatekeeperAssess": false,
       "entitlements": "electron/entitlements.mac.plist",
       "entitlementsInherit": "electron/entitlements.mac.plist",
-      "notarize": {
-        "teamId": "${env.APPLE_TEAM_ID}"
-      }
+      "notarize": true
     },
     "win": {
       "target": [
@@ -62,8 +60,7 @@
       ],
       "signingHashAlgorithms": [
         "sha256"
-      ],
-      "sign": null
+      ]
     },
     "nsis": {
       "oneClick": false,
