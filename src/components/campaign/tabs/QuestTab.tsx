@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { useRealtimeTable } from '@/hooks/useRealtimeTable'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import type { Quest } from '@/types/database'
 
 interface Props {
@@ -79,7 +80,7 @@ export function QuestTab({ campaignId }: Props) {
 
   const inputClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/40 transition-colors'
 
-  if (loading) return <div className="py-8 text-center text-sm text-gray-500">Loading...</div>
+  if (loading) return <SkeletonList rows={4} />
 
   const rumors = quests.filter((q) => q.status === 'rumor')
   const active = quests.filter((q) => q.status === 'active')
@@ -217,8 +218,8 @@ function QuestCard({
     <div className={`rounded-xl border border-l-4 ${config.bg} ${config.accent} ${isDone ? 'opacity-60' : ''} transition-all`}>
       <div className="flex items-start justify-between p-3">
         <div className="flex items-start gap-2.5 min-w-0 flex-1">
-          <button onClick={onToggle} className="mt-0.5 text-gray-500 hover:text-parchment transition-colors">
-            {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          <button onClick={onToggle} className="mt-0.5 text-gray-500 hover:text-parchment transition-colors focus-ring" aria-label={expanded ? 'Dölj detaljer' : 'Visa detaljer'} aria-expanded={expanded}>
+            {expanded ? <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />}
           </button>
           <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${config.color}`} />
           <div className="min-w-0 flex-1">
@@ -235,8 +236,8 @@ function QuestCard({
             )}
           </div>
         </div>
-        <button onClick={() => onDelete(quest.id)} className="rounded p-1 text-gray-600 hover:text-red-400 transition-colors">
-          <Trash2 className="h-3 w-3" />
+        <button onClick={() => onDelete(quest.id)} className="rounded p-1 text-gray-600 hover:text-red-400 transition-colors focus-ring" aria-label={`Radera uppdrag: ${quest.title}`}>
+          <Trash2 className="h-3 w-3" aria-hidden="true" />
         </button>
       </div>
 

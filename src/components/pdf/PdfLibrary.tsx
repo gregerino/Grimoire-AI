@@ -58,10 +58,10 @@ export function PdfLibrary({ campaignId, userId }: PdfLibraryProps) {
         <h2 className="text-lg font-semibold text-parchment">PDF Library</h2>
         <button
           onClick={fetchPdfs}
-          className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-parchment transition-colors"
-          title="Refresh"
+          className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-parchment transition-colors focus-ring"
+          aria-label="Uppdatera PDF-lista"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 
@@ -102,10 +102,10 @@ export function PdfLibrary({ campaignId, userId }: PdfLibraryProps) {
                 </div>
                 <button
                   onClick={() => handleDelete(pdf.id)}
-                  className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-red-400 transition-colors"
-                  title="Delete PDF"
+                  className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-red-400 transition-colors focus-ring"
+                  aria-label={`Radera ${pdf.filename}`}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
             )

@@ -21,7 +21,7 @@ export function Card({ children, hoverable, glowing, padding = 'md', className =
         rounded-xl border border-navy bg-dark-navy
         transition-all duration-200 ease-smooth
         ${paddingStyles[padding]}
-        ${hoverable ? 'hover:border-gold/30 hover:shadow-card-hover cursor-pointer' : ''}
+        ${hoverable ? 'hover:border-gold/30 hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer' : ''}
         ${glowing ? 'shadow-glow-gold border-gold/20' : ''}
         ${className}
       `}

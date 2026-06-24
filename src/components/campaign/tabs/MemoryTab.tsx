@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useRealtimeTable } from '@/hooks/useRealtimeTable'
 import { supabase } from '@/lib/supabase'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import type { MemoryEntry, MemoryCategory, MemoryImportance } from '@/types/database'
 
 interface Props {
@@ -89,7 +90,7 @@ export function MemoryTab({ campaignId }: Props) {
 
   const inputClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/40 transition-colors'
 
-  if (loading) return <div className="py-8 text-center text-sm text-gray-500">Loading...</div>
+  if (loading) return <SkeletonList rows={4} />
 
   return (
     <div className="space-y-4">
@@ -272,7 +273,7 @@ function MemoryCard({
                 onImportanceChange(next)
               }}
               className={`mt-1 h-2 w-2 shrink-0 rounded-full ${importanceDot[memory.importance]}`}
-              title={`Importance: ${memory.importance} (click to cycle)`}
+              aria-label={`Viktighet: ${memory.importance} — klicka för att ändra`}
             />
             <div className="min-w-0">
               <p className="text-sm text-gray-300 leading-relaxed">{memory.content}</p>
@@ -285,11 +286,11 @@ function MemoryCard({
             </div>
           </div>
           <div className="flex shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={onStartEdit} className="rounded p-1 text-gray-600 hover:text-gold transition-colors">
-              <Edit3 className="h-3 w-3" />
+            <button onClick={onStartEdit} className="rounded p-1 text-gray-600 hover:text-gold transition-colors focus-ring" aria-label="Redigera minne">
+              <Edit3 className="h-3 w-3" aria-hidden="true" />
             </button>
-            <button onClick={onDelete} className="rounded p-1 text-gray-600 hover:text-red-400 transition-colors">
-              <Trash2 className="h-3 w-3" />
+            <button onClick={onDelete} className="rounded p-1 text-gray-600 hover:text-red-400 transition-colors focus-ring" aria-label="Radera minne">
+              <Trash2 className="h-3 w-3" aria-hidden="true" />
             </button>
           </div>
         </div>

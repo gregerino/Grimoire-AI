@@ -8,6 +8,7 @@ import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SkeletonCampaignGrid } from '@/components/ui/Skeleton'
 import type { Campaign } from '@/types/database'
 
 export function DashboardPage() {
@@ -41,9 +42,7 @@ export function DashboardPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
-        </div>
+        <SkeletonCampaignGrid />
       ) : campaigns.length === 0 ? (
         <EmptyState
           icon={<ScrollText className="h-12 w-12" />}

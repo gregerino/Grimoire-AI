@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BookOpen, Trash2, Loader2, CheckCircle, AlertCircle, RefreshCw, Upload, FileText, X } from 'lucide-react'
 import { listRulebooks, deleteRulebook, uploadRulebook } from '@/lib/api'
+import { fantasyErrors, toFantasyError } from '@/lib/errors'
 import type { Rulebook } from '@/types/database'
 
 interface RulebookLibraryProps {
@@ -61,7 +62,7 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
       setSelectedFile(null)
       fetchRulebooks()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      setError(toFantasyError(err))
     } finally {
       setUploading(false)
     }
@@ -81,10 +82,10 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
           <h2 className="text-lg font-semibold text-parchment">Uploaded Rulebooks</h2>
           <button
             onClick={fetchRulebooks}
-            className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-parchment transition-colors"
-            title="Refresh"
+            className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-parchment transition-colors focus-ring"
+            aria-label="Uppdatera regelbokslista"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -101,7 +102,7 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
               if (file?.type === 'application/pdf') {
                 setSelectedFile(file)
               } else {
-                setError('Only PDF files are accepted')
+                setError(fantasyErrors.pdfCorrupt)
               }
             }}
             className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors ${
@@ -116,6 +117,7 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
             <input
               type="file"
               accept=".pdf"
+              aria-label="Välj regelbok att ladda upp"
               onChange={(e) => {
                 setError(null)
                 const file = e.target.files?.[0]
@@ -139,9 +141,10 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedFile(null)}
-                  className="rounded p-1 text-gray-500 hover:bg-navy hover:text-parchment transition-colors"
+                  className="rounded p-1 text-gray-500 hover:bg-navy hover:text-parchment transition-colors focus-ring"
+                  aria-label="Ta bort vald fil"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </button>
                 <button
                   onClick={handleUpload}
@@ -154,7 +157,7 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
             </div>
           )}
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p role="alert" className="text-sm text-blood-light">{error}</p>}
         </div>
 
         {/* Rulebook list */}
@@ -189,10 +192,10 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
                   </div>
                   <button
                     onClick={() => handleDelete(rulebook.id)}
-                    className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-red-400 transition-colors"
-                    title="Delete rulebook"
+                    className="rounded p-1.5 text-gray-500 hover:bg-navy hover:text-red-400 transition-colors focus-ring"
+                    aria-label={`Radera ${rulebook.filename}`}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               )

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sentry } from '@/lib/sentry'
 import { useAuth } from '@/hooks/useAuth'
@@ -7,10 +7,19 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { LoginPage } from '@/pages/LoginPage'
-import { DashboardPage } from '@/pages/DashboardPage'
-import { CampaignPage } from '@/pages/CampaignPage'
-import { PlayPage } from '@/pages/PlayPage'
-import { RulebooksPage } from '@/pages/RulebooksPage'
+
+const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
+const CampaignPage = lazy(() => import('@/pages/CampaignPage').then(m => ({ default: m.CampaignPage })))
+const PlayPage = lazy(() => import('@/pages/PlayPage').then(m => ({ default: m.PlayPage })))
+const RulebooksPage = lazy(() => import('@/pages/RulebooksPage').then(m => ({ default: m.RulebooksPage })))
+
+function PageLoader() {
+  return (
+    <div className="flex h-64 items-center justify-center" role="status" aria-label="Laddar sida">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+    </div>
+  )
+}
 
 function ErrorFallback() {
   return (
@@ -40,22 +49,24 @@ export default function App() {
   return (
     <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            element={
-              <ProtectedRoute>
-                {!loading && !completed ? <OnboardingWizard /> : <AppLayout />}
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/campaign/:id" element={<CampaignPage />} />
-            <Route path="/campaign/:id/play" element={<PlayPage />} />
-            <Route path="/rulebooks" element={<RulebooksPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              element={
+                <ProtectedRoute>
+                  {!loading && !completed ? <OnboardingWizard /> : <AppLayout />}
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/campaign/:id" element={<CampaignPage />} />
+              <Route path="/campaign/:id/play" element={<PlayPage />} />
+              <Route path="/rulebooks" element={<RulebooksPage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </Sentry.ErrorBoundary>
   )

@@ -44,7 +44,7 @@ export function Badge({ children, variant = 'default', size = 'md', dot, classNa
         ${className}
       `}
     >
-      {dot && <span className={`h-1.5 w-1.5 rounded-full ${dotColors[variant]}`} />}
+      {dot && <span className={`h-1.5 w-1.5 rounded-full ${dotColors[variant]}`} aria-hidden="true" />}
       {children}
     </span>
   )

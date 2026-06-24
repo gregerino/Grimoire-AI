@@ -17,6 +17,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', 
     <Modal
       open={open}
       onClose={onCancel}
+      title={title}
       size="sm"
       footer={
         <>

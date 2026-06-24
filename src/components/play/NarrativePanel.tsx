@@ -30,7 +30,7 @@ export function NarrativePanel({ messages, streaming, speechEnabled, onSpeak }: 
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <Scroll className="mx-auto mb-6 h-16 w-16 text-gold/20" />
+          <Scroll className="mx-auto mb-6 h-16 w-16 text-gold/20" aria-hidden="true" />
           <h2 className="font-display text-2xl font-bold tracking-wide text-parchment/80">
             The Adventure Awaits
           </h2>
@@ -43,7 +43,7 @@ export function NarrativePanel({ messages, streaming, speechEnabled, onSpeak }: 
   }
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto" role="log" aria-live="polite" aria-label="Spelberättelse">
       <div className="mx-auto max-w-2xl px-8 py-8 space-y-8">
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => (
@@ -71,10 +71,10 @@ export function NarrativePanel({ messages, streaming, speechEnabled, onSpeak }: 
                   {speechEnabled && msg.content && !(streaming && i === messages.length - 1) && (
                     <button
                       onClick={() => onSpeak(msg.content)}
-                      className="absolute -right-10 top-0 rounded-full p-2 text-mist opacity-0 transition-all hover:text-gold group-hover:opacity-100"
-                      title="Läs upp"
+                      className="absolute -right-10 top-0 rounded-full p-2 text-mist opacity-0 transition-all hover:text-gold group-hover:opacity-100 focus:opacity-100 focus-ring"
+                      aria-label="Läs upp detta stycke"
                     >
-                      <Volume2 className="h-4 w-4" />
+                      <Volume2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                   )}
                 </div>

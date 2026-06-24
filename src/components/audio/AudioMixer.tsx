@@ -23,12 +23,13 @@ function VolumeSlider({
     <div className={`flex items-center gap-2 ${disabled ? 'opacity-30 pointer-events-none' : ''}`}>
       <button
         onClick={onToggleMute}
-        className={`shrink-0 rounded p-1 transition-colors ${
+        className={`shrink-0 rounded p-1 transition-colors focus-ring ${
           muted ? 'text-gray-600' : 'text-gold'
         } hover:bg-navy`}
-        title={`${muted ? 'Slå på' : 'Tysta'} ${label}`}
+        aria-label={`${muted ? 'Slå på' : 'Tysta'} ${label}`}
+        aria-pressed={!muted}
       >
-        {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+        {muted ? <VolumeX className="h-3.5 w-3.5" aria-hidden="true" /> : <Icon className="h-3.5 w-3.5" aria-hidden="true" />}
       </button>
       <div className="flex flex-1 flex-col gap-0.5">
         <div className="flex items-center justify-between">
@@ -42,6 +43,7 @@ function VolumeSlider({
           step={0.01}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
+          aria-label={`${label} volym`}
           className="h-1 w-full cursor-pointer appearance-none rounded-full bg-navy accent-gold [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gold"
         />
       </div>

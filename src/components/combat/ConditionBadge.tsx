@@ -52,9 +52,10 @@ export function ConditionBadge({ condition, onRemove, size = 'sm' }: Props) {
         {onRemove && (
           <button
             onClick={(e) => { e.stopPropagation(); onRemove() }}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-white/10 transition-colors"
+            className="ml-0.5 rounded-full p-0.5 hover:bg-white/10 transition-colors focus-ring"
+            aria-label={`Ta bort ${condition}`}
           >
-            <X className="h-2.5 w-2.5" />
+            <X className="h-2.5 w-2.5" aria-hidden="true" />
           </button>
         )}
       </span>

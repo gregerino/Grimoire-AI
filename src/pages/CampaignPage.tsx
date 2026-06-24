@@ -13,6 +13,7 @@ import { MemoryTab } from '@/components/campaign/tabs/MemoryTab'
 import { NotesTab } from '@/components/campaign/tabs/NotesTab'
 import { CharacterPanel } from '@/components/character/CharacterPanel'
 import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
+import { Skeleton, SkeletonList } from '@/components/ui/Skeleton'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SessionHistory } from '@/components/session/SessionHistory'
 import { SessionReader } from '@/components/session/SessionReader'
@@ -76,7 +77,14 @@ export function CampaignPage() {
   }
 
   if (!id || !user) return null
-  if (loading) return <div className="flex h-64 items-center justify-center text-gray-500">Loading...</div>
+  if (loading) return (
+    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6" aria-busy="true" aria-label="Laddar kampanj">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-4 w-32" />
+      <div className="flex gap-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-9 w-20" />)}</div>
+      <SkeletonList rows={3} />
+    </div>
+  )
   if (!campaign) return <div className="flex h-64 items-center justify-center text-gray-500">Campaign not found</div>
 
   const statusColors = {
@@ -113,17 +121,17 @@ export function CampaignPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEdit(true)}
-            className="rounded-lg p-2 text-gray-500 hover:bg-navy hover:text-gold transition-colors"
-            title="Edit campaign"
+            className="rounded-lg p-2 text-gray-500 hover:bg-navy hover:text-gold transition-colors focus-ring"
+            aria-label="Redigera kampanj"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-4 w-4" aria-hidden="true" />
           </button>
           <button
             onClick={() => setShowDelete(true)}
-            className="rounded-lg p-2 text-gray-500 hover:bg-blood/20 hover:text-red-400 transition-colors"
-            title="Delete campaign"
+            className="rounded-lg p-2 text-gray-500 hover:bg-blood/20 hover:text-red-400 transition-colors focus-ring"
+            aria-label="Radera kampanj"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
           </button>
           <Link
             to={`/campaign/${id}/play`}
@@ -136,25 +144,29 @@ export function CampaignPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 rounded-xl border border-navy bg-dark-navy/50 p-1">
+      <nav className="mb-6 flex gap-1 rounded-xl border border-navy bg-dark-navy/50 p-1" role="tablist" aria-label="Kampanjflikar">
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`tabpanel-${tab.id}`}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-ring ${
               activeTab === tab.id
                 ? 'bg-navy text-gold'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            {tab.icon}
+            <span aria-hidden="true">{tab.icon}</span>
             <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sr-only sm:hidden">{tab.label}</span>
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* Tab content */}
-      <div className="rounded-xl border border-navy bg-dark-navy p-6">
+      <div id={`tabpanel-${activeTab}`} role="tabpanel" className="rounded-xl border border-navy bg-dark-navy p-6">
         {activeTab === 'overview' && <OverviewTab campaign={campaign} />}
         {activeTab === 'character' && <CharacterPanel campaignId={id} />}
         {activeTab === 'npcs' && <NpcTab campaignId={id} />}

@@ -63,20 +63,22 @@ export function PlayerInput({
       <div className="mx-auto max-w-2xl space-y-2">
         {/* Skill check row */}
         <div className="flex items-center gap-2">
-          <Dices className="h-3.5 w-3.5 shrink-0 text-mystic/60" />
+          <Dices className="h-3.5 w-3.5 shrink-0 text-mystic/60" aria-hidden="true" />
           <input
             value={skillInput}
             onChange={(e) => onSkillInputChange(e.target.value)}
             onKeyDown={handleSkillKeyDown}
             placeholder="Skill check or roll result (1–30)"
-            className="flex-1 rounded-lg border border-navy/40 bg-transparent px-3 py-1.5 font-ui text-xs text-parchment/80 placeholder-mist/50 outline-none transition-colors focus:border-mystic/40"
+            aria-label="Skill check or roll result"
+            className="flex-1 rounded-lg border border-navy/40 bg-transparent px-3 py-1.5 font-ui text-xs text-parchment/80 placeholder-mist/50 outline-none transition-colors focus:border-mystic/40 focus-ring"
           />
           <button
             onClick={onSkillSend}
             disabled={!skillInput.trim() || streaming}
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-mystic/20 text-mystic-light transition-colors hover:bg-mystic/30 disabled:opacity-20"
+            aria-label="Skicka tärningsslag"
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-mystic/20 text-mystic-light transition-colors hover:bg-mystic/30 disabled:opacity-20 focus-ring"
           >
-            {streaming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Dices className="h-3 w-3" />}
+            {streaming ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : <Dices className="h-3 w-3" aria-hidden="true" />}
           </button>
         </div>
 
@@ -89,8 +91,9 @@ export function PlayerInput({
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="What do you do?"
+              aria-label="Beskriv din handling"
               rows={1}
-              className={`w-full resize-none rounded-2xl border bg-dark-navy/60 px-5 py-3.5 font-body text-base text-parchment placeholder-mist/40 outline-none transition-all ${
+              className={`w-full resize-none rounded-2xl border bg-dark-navy/60 px-5 py-3.5 font-body text-base text-parchment placeholder-mist/40 outline-none transition-all focus-ring ${
                 micListening
                   ? 'border-blood/40 shadow-glow-blood'
                   : 'border-navy/40 focus:border-gold/30 focus:shadow-glow-gold'
@@ -107,9 +110,10 @@ export function PlayerInput({
           <button
             onClick={onSend}
             disabled={!input.trim() || streaming}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold text-dark-navy transition-all hover:bg-gold-light hover:shadow-glow-gold disabled:opacity-20 disabled:shadow-none"
+            aria-label="Skicka meddelande"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold text-dark-navy transition-all hover:bg-gold-light hover:shadow-glow-gold disabled:opacity-20 disabled:shadow-none focus-ring"
           >
-            {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {streaming ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
           </button>
         </div>
       </div>

@@ -9,6 +9,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, Props>(
   ({ label, error, className = '', id, ...rest }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-')
 
+    const errorId = error ? `${inputId}-error` : undefined
+
     return (
       <div className="space-y-1.5">
         {label && (
@@ -19,6 +21,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, Props>(
         <textarea
           ref={ref}
           id={inputId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
           className={`
             w-full rounded-lg border bg-midnight px-3 py-2.5 text-sm text-parchment font-ui
             placeholder:text-mist
@@ -34,7 +38,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, Props>(
           {...rest}
         />
         {error && (
-          <p className="text-xs text-blood-light font-ui">{error}</p>
+          <p id={errorId} role="alert" className="text-xs text-blood-light font-ui">{error}</p>
         )}
       </div>
     )

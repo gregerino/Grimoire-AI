@@ -12,6 +12,9 @@ export function DeathSaveTracker({ saves }: Props) {
 
   return (
     <motion.div
+      role="status"
+      aria-live="polite"
+      aria-label={`Death saves: ${saves.successes} lyckat, ${saves.failures} misslyckat${isStabilized ? ' — Stabiliserad' : ''}${isDead ? ' — Död' : ''}`}
       className="relative overflow-hidden rounded-xl border border-blood/30 bg-dark-navy p-4"
       animate={{
         borderColor: isDead

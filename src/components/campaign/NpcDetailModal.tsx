@@ -93,11 +93,11 @@ export function NpcDetailModal({ npc, open, onClose, onUpdated }: Props) {
             {!npc.is_alive && <span className="text-xs text-red-400">(dead)</span>}
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={toggleAlive} className="rounded p-1.5 text-gray-500 hover:bg-navy transition-colors" title={npc.is_alive ? 'Mark as dead' : 'Revive'}>
-              {npc.is_alive ? <Skull className="h-4 w-4" /> : <Heart className="h-4 w-4" />}
+            <button onClick={toggleAlive} className="rounded p-1.5 text-gray-500 hover:bg-navy transition-colors focus-ring" aria-label={npc.is_alive ? 'Markera som död' : 'Återuppliva'}>
+              {npc.is_alive ? <Skull className="h-4 w-4" aria-hidden="true" /> : <Heart className="h-4 w-4" aria-hidden="true" />}
             </button>
-            <button onClick={onClose} className="rounded p-1 text-gray-500 hover:bg-navy hover:text-gray-300">
-              <X className="h-4 w-4" />
+            <button onClick={onClose} className="rounded p-1 text-gray-500 hover:bg-navy hover:text-gray-300 focus-ring" aria-label="Stäng">
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>

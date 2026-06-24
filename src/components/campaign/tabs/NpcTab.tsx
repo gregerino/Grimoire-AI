@@ -6,6 +6,7 @@ import { useRealtimeTable } from '@/hooks/useRealtimeTable'
 import { NpcDetailModal } from '@/components/campaign/NpcDetailModal'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import type { Npc } from '@/types/database'
 
 interface Props {
@@ -54,7 +55,7 @@ export function NpcTab({ campaignId }: Props) {
 
   const inputClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/40 transition-colors'
 
-  if (loading) return <div className="py-8 text-center text-sm text-gray-500">Loading...</div>
+  if (loading) return <SkeletonList rows={4} />
 
   return (
     <div className="space-y-4">

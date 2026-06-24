@@ -7,6 +7,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { supabase } from '@/lib/supabase'
 import { useRealtimeTable } from '@/hooks/useRealtimeTable'
 import { useInventoryStore, calculateTotalWeight, totalValueInGp } from '@/stores/inventoryStore'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import type { InventoryItem, ItemCategory, ItemRarity } from '@/types/database'
 
 interface Props {
@@ -149,7 +150,7 @@ export function InventoryTab({ campaignId }: Props) {
 
   const inputClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/40 transition-colors'
 
-  if (loading) return <div className="py-8 text-center text-sm text-gray-500">Loading...</div>
+  if (loading) return <SkeletonList rows={4} />
 
   return (
     <div className="space-y-3">
@@ -366,8 +367,8 @@ function SortableItemRow({ item, isDragActive, onToggleEquip, onAdjustQty, onDel
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <button {...attributes} {...listeners} className="cursor-grab touch-none text-gray-600 hover:text-gold/60 transition-colors">
-          <GripVertical className="h-3.5 w-3.5" />
+        <button {...attributes} {...listeners} className="cursor-grab touch-none text-gray-600 hover:text-gold/60 transition-colors" aria-label="Dra för att sortera">
+          <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -391,11 +392,11 @@ function SortableItemRow({ item, isDragActive, onToggleEquip, onAdjustQty, onDel
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <button onClick={() => onAdjustQty(item, -1)} className="rounded p-1 text-gray-500 hover:bg-navy transition-colors">
-          <Minus className="h-3 w-3" />
+        <button onClick={() => onAdjustQty(item, -1)} className="rounded p-1 text-gray-500 hover:bg-navy transition-colors focus-ring" aria-label={`Minska antal ${item.name}`}>
+          <Minus className="h-3 w-3" aria-hidden="true" />
         </button>
-        <button onClick={() => onAdjustQty(item, 1)} className="rounded p-1 text-gray-500 hover:bg-navy transition-colors">
-          <Plus className="h-3 w-3" />
+        <button onClick={() => onAdjustQty(item, 1)} className="rounded p-1 text-gray-500 hover:bg-navy transition-colors focus-ring" aria-label={`Öka antal ${item.name}`}>
+          <Plus className="h-3 w-3" aria-hidden="true" />
         </button>
         <button
           onClick={() => onToggleEquip(item)}
@@ -403,8 +404,8 @@ function SortableItemRow({ item, isDragActive, onToggleEquip, onAdjustQty, onDel
         >
           {item.is_equipped ? 'Equipped' : 'Equip'}
         </button>
-        <button onClick={() => onDelete(item.id)} className="rounded p-1 text-gray-500 hover:bg-navy hover:text-red-400 transition-colors">
-          <Trash2 className="h-3 w-3" />
+        <button onClick={() => onDelete(item.id)} className="rounded p-1 text-gray-500 hover:bg-navy hover:text-red-400 transition-colors focus-ring" aria-label={`Radera ${item.name}`}>
+          <Trash2 className="h-3 w-3" aria-hidden="true" />
         </button>
       </div>
     </motion.div>

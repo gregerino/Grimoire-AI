@@ -54,16 +54,17 @@ export function SpeakingIndicator({ speaking, paused, onStop, onTogglePause, cur
         >
           <button
             onClick={onTogglePause}
-            className="shrink-0 text-gold/80 hover:text-gold transition-colors"
-            title={paused ? 'Fortsätt' : 'Pausa'}
+            className="shrink-0 text-gold/80 hover:text-gold transition-colors focus-ring"
+            aria-label={paused ? 'Fortsätt uppläsning' : 'Pausa uppläsning'}
           >
-            <Volume2 className="h-4 w-4" />
+            <Volume2 className="h-4 w-4" aria-hidden="true" />
           </button>
 
           <button
             onClick={onTogglePause}
-            className="flex items-end gap-[3px] h-6 cursor-pointer"
-            title={paused ? 'Fortsätt uppläsning' : 'Pausa uppläsning'}
+            className="flex items-end gap-[3px] h-6 cursor-pointer focus-ring"
+            aria-label={paused ? 'Fortsätt uppläsning' : 'Pausa uppläsning'}
+            aria-hidden="true"
           >
             {Array.from({ length: 7 }).map((_, i) => (
               <WaveBar key={i} index={i} paused={paused} />
@@ -78,10 +79,10 @@ export function SpeakingIndicator({ speaking, paused, onStop, onTogglePause, cur
 
           <button
             onClick={onStop}
-            className="shrink-0 rounded-md p-1 text-mist hover:bg-navy/40 hover:text-parchment transition-colors"
-            title="Avbryt uppläsning"
+            className="shrink-0 rounded-md p-1 text-mist hover:bg-navy/40 hover:text-parchment transition-colors focus-ring"
+            aria-label="Avbryt uppläsning"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </motion.div>
       )}

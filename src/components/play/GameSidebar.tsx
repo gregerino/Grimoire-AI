@@ -62,9 +62,10 @@ export function GameSidebar({ activePanel, onTogglePanel, children }: Props) {
             </div>
             <button
               onClick={() => onTogglePanel(null)}
-              className="shrink-0 p-2 text-mist transition-colors hover:text-parchment"
+              className="shrink-0 p-2 text-mist transition-colors hover:text-parchment focus-ring"
+              aria-label="Stäng sidopanel"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
 
@@ -94,18 +95,20 @@ function TabButton({
   return (
     <button
       onClick={onToggle}
-      className={`relative flex shrink-0 items-center justify-center p-2.5 transition-colors ${
+      className={`relative flex shrink-0 items-center justify-center p-2.5 transition-colors focus-ring ${
         isActive
           ? 'border-b-2 border-gold text-gold'
           : showDot
             ? 'text-red-400'
             : 'text-mist hover:text-stone'
       }`}
-      title={tab.label}
+      aria-label={tab.label}
+      aria-selected={isActive}
+      role="tab"
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="h-4 w-4" aria-hidden="true" />
       {showDot && (
-        <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
+        <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" aria-label="Strid pågår" />
       )}
     </button>
   )

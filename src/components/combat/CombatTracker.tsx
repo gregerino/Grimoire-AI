@@ -23,7 +23,7 @@ export function CombatTracker() {
           Combat
         </h3>
         <div className="rounded-xl border border-dashed border-navy bg-dark-navy/50 p-6 text-center">
-          <Swords className="mx-auto mb-3 h-8 w-8 text-gray-600" />
+          <Swords className="mx-auto mb-3 h-8 w-8 text-gray-600" aria-hidden="true" />
           <p className="text-sm text-gray-500">
             No active combat. The DM will initiate combat when enemies appear.
           </p>
@@ -67,10 +67,10 @@ export function CombatTracker() {
           </AnimatePresence>
           <button
             onClick={endCombat}
-            className="rounded p-1 text-gray-600 transition-colors hover:bg-navy hover:text-gray-400"
-            title="End combat"
+            className="rounded p-1 text-gray-600 transition-colors hover:bg-navy hover:text-gray-400 focus-ring"
+            aria-label="Avsluta strid"
           >
-            <Flag className="h-3.5 w-3.5" />
+            <Flag className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>

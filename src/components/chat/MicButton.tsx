@@ -77,11 +77,11 @@ export function MicButton({ lang, disabled, onTranscript, onInterim, onListening
       <div className="relative">
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-xl border border-navy bg-dark-navy text-gray-600 cursor-not-allowed"
-          title="Taligenkänning stöds inte i denna webbläsare. Använd Chrome eller Edge."
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-navy bg-dark-navy text-gray-600 cursor-not-allowed focus-ring"
+          aria-label="Mikrofon ej tillgänglig — kräver Chrome eller Edge"
           onClick={() => setShowTooltip((v) => !v)}
         >
-          <MicOff className="h-4 w-4" />
+          <MicOff className="h-4 w-4" aria-hidden="true" />
         </button>
         {showTooltip && (
           <div className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-amber-500/30 bg-amber-950/90 px-3 py-2 text-xs text-amber-200 shadow-lg">
@@ -106,7 +106,8 @@ export function MicButton({ lang, disabled, onTranscript, onInterim, onListening
             ? 'border-red-500/50 bg-red-500/20 text-red-400'
             : 'border-navy bg-dark-navy text-gray-400 hover:border-gold/30 hover:text-gold disabled:opacity-30 disabled:cursor-not-allowed'
         }`}
-        title={listening ? 'Klicka för att stoppa' : 'Klicka för att tala'}
+        aria-label={listening ? 'Stoppa inspelning' : 'Starta röstinmatning'}
+        aria-pressed={listening}
       >
         {listening && (
           <motion.div
@@ -126,9 +127,9 @@ export function MicButton({ lang, disabled, onTranscript, onInterim, onListening
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
           >
-            <div className="flex items-center gap-2 whitespace-nowrap text-xs text-red-200">
-              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-              <VuMeter volume={volume} />
+            <div className="flex items-center gap-2 whitespace-nowrap text-xs text-red-200" role="status" aria-live="polite">
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
+              <span aria-hidden="true"><VuMeter volume={volume} /></span>
               <span>Lyssnar…</span>
             </div>
           </motion.div>
@@ -136,9 +137,9 @@ export function MicButton({ lang, disabled, onTranscript, onInterim, onListening
       </AnimatePresence>
 
       {error && showTooltip && (
-        <div className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 max-w-64 rounded-lg border border-amber-500/30 bg-amber-950/90 px-3 py-2 text-xs text-amber-200 shadow-lg">
+        <div role="alert" className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 max-w-64 rounded-lg border border-amber-500/30 bg-amber-950/90 px-3 py-2 text-xs text-amber-200 shadow-lg">
           <div className="flex items-start gap-1.5">
-            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
         </div>

@@ -18,7 +18,7 @@ export function EmptyState({ icon, title, description, cta, onAction }: Props) {
       transition={{ duration: 0.4 }}
       className="flex flex-col items-center justify-center rounded-xl border border-dashed border-navy py-20 px-6"
     >
-      <div className="mb-4 text-mist">{icon}</div>
+      <div className="mb-4 text-mist" aria-hidden="true">{icon}</div>
       <h3 className="font-display text-lg text-parchment-dark mb-2 text-center">{title}</h3>
       <p className="font-body text-sm text-stone mb-6 text-center max-w-sm">{description}</p>
       {cta && onAction && (

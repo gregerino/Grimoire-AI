@@ -43,6 +43,7 @@ import { NotesTab } from '@/components/campaign/tabs/NotesTab'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useTimeStore, TIME_ICONS, TIME_LABELS } from '@/stores/timeStore'
 import { LootReveal } from '@/components/loot/LootReveal'
+import { toFantasyError } from '@/lib/errors'
 
 import { LocationHeader } from '@/components/play/LocationHeader'
 import { NarrativePanel } from '@/components/play/NarrativePanel'
@@ -426,7 +427,7 @@ export function PlayPage() {
           const updated = [...prev]
           updated[updated.length - 1] = {
             role: 'assistant',
-            content: `*Error: ${error}*`,
+            content: `*${toFantasyError(error)}*`,
           }
           return updated
         })
@@ -492,10 +493,11 @@ export function PlayPage() {
           {/* Sidebar toggle */}
           <button
             onClick={() => togglePanel(sidebarPanel ? null : 'character')}
-            className={`rounded p-1 transition-colors ${sidebarPanel ? 'text-gold' : 'text-mist hover:text-stone'}`}
-            title={sidebarPanel ? 'Close panel' : 'Open panel'}
+            className={`rounded p-1 transition-colors focus-ring ${sidebarPanel ? 'text-gold' : 'text-mist hover:text-stone'}`}
+            aria-label={sidebarPanel ? 'Stäng sidopanel' : 'Öppna sidopanel'}
+            aria-expanded={!!sidebarPanel}
           >
-            {sidebarPanel ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
+            {sidebarPanel ? <PanelLeftClose className="h-3.5 w-3.5" aria-hidden="true" /> : <PanelLeftOpen className="h-3.5 w-3.5" aria-hidden="true" />}
           </button>
           <div className="h-3 w-px bg-navy/30" />
           <Link
@@ -526,10 +528,10 @@ export function PlayPage() {
               setAiProvider(next)
               if (id) supabase.from('campaigns').update({ ai_provider: next }).eq('id', id).then()
             }}
-            className="flex items-center gap-1 rounded px-2 py-1 text-[10px] text-mist hover:text-parchment transition-colors"
-            title={`Using ${aiProvider === 'claude' ? 'Claude' : 'GPT-4o mini'}`}
+            className="flex items-center gap-1 rounded px-2 py-1 text-[10px] text-mist hover:text-parchment transition-colors focus-ring"
+            aria-label={`Byt AI-modell, nuvarande: ${aiProvider === 'claude' ? 'Claude' : 'GPT-4o mini'}`}
           >
-            <Bot className="h-3 w-3" />
+            <Bot className="h-3 w-3" aria-hidden="true" />
             <span>{aiProvider === 'claude' ? 'Claude' : 'GPT-4o'}</span>
           </button>
 
@@ -543,17 +545,19 @@ export function PlayPage() {
           )}
           <button
             onClick={() => useSpeechStore.getState().setEnabled(!speechEnabled)}
-            className={`rounded p-1 transition-colors ${speechEnabled ? 'text-gold' : 'text-mist hover:text-stone'}`}
+            className={`rounded p-1 transition-colors focus-ring ${speechEnabled ? 'text-gold' : 'text-mist hover:text-stone'}`}
+            aria-label={speechEnabled ? 'Stäng av text-till-tal' : 'Slå på text-till-tal'}
+            aria-pressed={speechEnabled}
           >
-            {speechEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            {speechEnabled ? <Volume2 className="h-3.5 w-3.5" aria-hidden="true" /> : <VolumeX className="h-3.5 w-3.5" aria-hidden="true" />}
           </button>
           {speaking && (
             <>
-              <button onClick={speechPaused ? resumeSpeech : pauseSpeech} className="rounded p-1 text-gold hover:bg-navy/30">
-                {speechPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+              <button onClick={speechPaused ? resumeSpeech : pauseSpeech} className="rounded p-1 text-gold hover:bg-navy/30 focus-ring" aria-label={speechPaused ? 'Återuppta uppläsning' : 'Pausa uppläsning'}>
+                {speechPaused ? <Play className="h-3 w-3" aria-hidden="true" /> : <Pause className="h-3 w-3" aria-hidden="true" />}
               </button>
-              <button onClick={stopSpeech} className="rounded p-1 text-gold hover:bg-navy/30">
-                <Square className="h-2.5 w-2.5" />
+              <button onClick={stopSpeech} className="rounded p-1 text-gold hover:bg-navy/30 focus-ring" aria-label="Stoppa uppläsning">
+                <Square className="h-2.5 w-2.5" aria-hidden="true" />
               </button>
             </>
           )}
@@ -574,10 +578,10 @@ export function PlayPage() {
           <button
             onClick={startNewSession}
             disabled={loadingSession}
-            className="rounded p-1 text-mist hover:text-gold transition-colors"
-            title="New session"
+            className="rounded p-1 text-mist hover:text-gold transition-colors focus-ring"
+            aria-label="Ny session"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
 
         </div>

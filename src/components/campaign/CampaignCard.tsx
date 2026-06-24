@@ -19,12 +19,12 @@ const statusVariant = {
 export function CampaignCard({ campaign, onEdit, onDelete }: Props) {
   return (
     <Card hoverable padding="none" className="group relative">
-      <Link to={`/campaign/${campaign.id}`} className="absolute inset-0 rounded-xl" />
+      <Link to={`/campaign/${campaign.id}`} className="absolute inset-0 rounded-xl" aria-label={`Öppna kampanj: ${campaign.name}`} />
 
       <div className="p-5">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <Sword className="h-4 w-4 text-gold" />
+            <Sword className="h-4 w-4 text-gold" aria-hidden="true" />
             <h3 className="font-display font-semibold text-parchment group-hover:text-gold transition-colors">
               {campaign.name}
             </h3>
@@ -48,7 +48,7 @@ export function CampaignCard({ campaign, onEdit, onDelete }: Props) {
 
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 text-xs text-mist font-ui">
-              <Clock className="h-3 w-3" />
+              <Clock className="h-3 w-3" aria-hidden="true" />
               {new Date(campaign.updated_at).toLocaleDateString()}
             </div>
             <button
@@ -56,20 +56,20 @@ export function CampaignCard({ campaign, onEdit, onDelete }: Props) {
                 e.preventDefault()
                 onEdit(campaign)
               }}
-              className="relative z-10 rounded-md p-1 text-mist opacity-0 hover:bg-navy hover:text-gold group-hover:opacity-100 transition-all focus-ring"
-              title="Edit campaign"
+              className="relative z-10 rounded-md p-1 text-mist opacity-0 hover:bg-navy hover:text-gold group-hover:opacity-100 transition-all focus-ring focus:opacity-100"
+              aria-label={`Redigera ${campaign.name}`}
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
             <button
               onClick={(e) => {
                 e.preventDefault()
                 onDelete(campaign.id)
               }}
-              className="relative z-10 rounded-md p-1 text-mist opacity-0 hover:bg-blood/20 hover:text-blood-light group-hover:opacity-100 transition-all focus-ring"
-              title="Delete campaign"
+              className="relative z-10 rounded-md p-1 text-mist opacity-0 hover:bg-blood/20 hover:text-blood-light group-hover:opacity-100 transition-all focus-ring focus:opacity-100"
+              aria-label={`Radera ${campaign.name}`}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>

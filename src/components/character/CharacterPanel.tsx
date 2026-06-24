@@ -178,10 +178,10 @@ export function CharacterPanel({ campaignId }: Props) {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowRestDialog(true)}
-            className="rounded p-1 text-gray-600 transition-colors hover:text-gold"
-            title="Take a rest"
+            className="rounded p-1 text-gray-600 transition-colors hover:text-gold focus-ring"
+            aria-label="Vila"
           >
-            <Moon className="h-3.5 w-3.5" />
+            <Moon className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
           {character?.dndbeyondId && (
             <button
@@ -205,10 +205,10 @@ export function CharacterPanel({ campaignId }: Props) {
                   }, 2000)
                 }
               }}
-              className="rounded p-1 text-gray-600 transition-colors hover:text-gold"
-              title="Open D&D Beyond character sheet"
+              className="rounded p-1 text-gray-600 transition-colors hover:text-gold focus-ring"
+              aria-label="Öppna D&D Beyond karaktärsblad"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           )}
           <button
@@ -221,9 +221,9 @@ export function CharacterPanel({ campaignId }: Props) {
             }}
             disabled={syncing}
             className={`rounded p-1 transition-colors ${showDndbInput ? 'text-gold' : 'text-gray-600 hover:text-gold'} disabled:opacity-50`}
-            title={character?.dndbeyondId ? 'Re-sync from D&D Beyond' : 'Sync from D&D Beyond'}
+            aria-label={character?.dndbeyondId ? 'Synka från D&D Beyond' : 'Koppla D&D Beyond'}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -235,10 +235,11 @@ export function CharacterPanel({ campaignId }: Props) {
             <input
               type="text"
               placeholder="dndbeyond.com/characters/12345"
+              aria-label="D&D Beyond karaktärslänk"
               value={dndbUrl}
               onChange={(e) => setDndbUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleDndbSync()}
-              className="flex-1 rounded-lg border border-navy bg-navy/50 px-2 py-1 text-xs text-parchment placeholder-gray-600 outline-none focus:border-gold/50"
+              className="flex-1 rounded-lg border border-navy bg-navy/50 px-2 py-1 text-xs text-parchment placeholder-gray-600 outline-none focus:border-gold/50 focus-ring"
             />
             <button
               onClick={() => handleDndbSync()}

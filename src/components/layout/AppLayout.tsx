@@ -10,7 +10,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-midnight">
       <header className="border-b border-navy bg-dark-navy/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+        <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4" aria-label="Huvudnavigering">
           <Link to="/dashboard" className="flex items-center gap-2 text-gold hover:text-gold-light transition-colors">
             <img src={logo} alt="Grimoire" className="h-8 w-8" />
             <span className="text-lg font-display font-bold tracking-wide">Grimoire</span>
@@ -21,7 +21,7 @@ export function AppLayout() {
               to="/rulebooks"
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-stone font-ui hover:bg-navy hover:text-gold transition-colors focus-ring"
             >
-              <BookOpen className="h-4 w-4" />
+              <BookOpen className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Rulebooks</span>
             </Link>
             <Avatar
@@ -36,12 +36,12 @@ export function AppLayout() {
             <button
               onClick={signOut}
               className="rounded-md p-1.5 text-mist hover:bg-navy hover:text-parchment transition-colors focus-ring"
-              title="Sign out"
+              aria-label="Logga ut"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
-        </div>
+        </nav>
       </header>
 
       <main className="flex-1">

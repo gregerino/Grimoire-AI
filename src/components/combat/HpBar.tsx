@@ -47,11 +47,11 @@ export function HpBar({ current, max, temp = 0, size = 'md', showLabel = true }:
   const barHeight = size === 'sm' ? 'h-1.5' : 'h-2.5'
 
   return (
-    <div className="relative">
+    <div className="relative" role="meter" aria-label="HP" aria-valuenow={current} aria-valuemin={0} aria-valuemax={max}>
       {showLabel && (
         <div className="mb-1.5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Heart className="h-3.5 w-3.5 text-red-400" />
+            <Heart className="h-3.5 w-3.5 text-red-400" aria-hidden="true" />
             <span className="text-[10px] uppercase tracking-wider text-gray-500">HP</span>
           </div>
           <span className="text-xs font-bold text-parchment">

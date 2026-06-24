@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { Upload, FileText, X } from 'lucide-react'
 import { uploadPdf } from '@/lib/api'
+import { fantasyErrors, toFantasyError } from '@/lib/errors'
 
 interface PdfUploadProps {
   campaignId: string
@@ -33,7 +34,7 @@ export function PdfUpload({ campaignId, userId, onUploadComplete }: PdfUploadPro
     if (file?.type === 'application/pdf') {
       setSelectedFile(file)
     } else {
-      setError('Only PDF files are accepted')
+      setError(fantasyErrors.pdfCorrupt)
     }
   }, [])
 
@@ -56,7 +57,7 @@ export function PdfUpload({ campaignId, userId, onUploadComplete }: PdfUploadPro
       setSelectedFile(null)
       onUploadComplete()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      setError(toFantasyError(err))
     } finally {
       setUploading(false)
     }
@@ -83,6 +84,7 @@ export function PdfUpload({ campaignId, userId, onUploadComplete }: PdfUploadPro
           type="file"
           accept=".pdf"
           onChange={handleFileSelect}
+          aria-label="Välj PDF-fil att ladda upp"
           className="absolute inset-0 cursor-pointer opacity-0"
         />
       </div>
@@ -101,9 +103,10 @@ export function PdfUpload({ campaignId, userId, onUploadComplete }: PdfUploadPro
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSelectedFile(null)}
-              className="rounded p-1 text-gray-500 hover:bg-navy hover:text-parchment transition-colors"
+              className="rounded p-1 text-gray-500 hover:bg-navy hover:text-parchment transition-colors focus-ring"
+              aria-label="Ta bort vald fil"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
             <button
               onClick={handleUpload}
@@ -117,7 +120,7 @@ export function PdfUpload({ campaignId, userId, onUploadComplete }: PdfUploadPro
       )}
 
       {error && (
-        <p className="text-sm text-red-400">{error}</p>
+        <p role="alert" className="text-sm text-blood-light">{error}</p>
       )}
     </div>
   )

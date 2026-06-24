@@ -192,20 +192,22 @@ export function LocationList({ campaignId, sessionId }: Props) {
         {/* Search */}
         {locations.length > 0 && (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" aria-hidden="true" />
             <input
               type="text"
               className={inputClass + ' pl-9'}
               placeholder="Sök plats..."
+              aria-label="Sök bland platser"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 focus-ring"
+                aria-label="Rensa sökning"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -615,9 +617,10 @@ function LocationDetail({
                 <span className="text-sm text-gray-300 flex-1">{note}</span>
                 <button
                   onClick={() => onRemoveNote(location, i)}
-                  className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
+                  className="shrink-0 text-gray-600 hover:text-red-400 transition-colors focus-ring"
+                  aria-label="Ta bort notering"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               </div>
             ))}
@@ -627,15 +630,17 @@ function LocationDetail({
           <input
             className={inputClass + ' flex-1'}
             placeholder="Lägg till notering..."
+            aria-label="Ny notering"
             value={noteInput}
             onChange={(e) => setNoteInput(e.target.value)}
           />
           <button
             type="submit"
             disabled={!noteInput.trim()}
-            className="rounded-lg bg-navy px-3 py-2 text-xs text-parchment hover:bg-gold/10 transition-colors disabled:opacity-30"
+            className="rounded-lg bg-navy px-3 py-2 text-xs text-parchment hover:bg-gold/10 transition-colors disabled:opacity-30 focus-ring"
+            aria-label="Lägg till notering"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </form>
       </div>
