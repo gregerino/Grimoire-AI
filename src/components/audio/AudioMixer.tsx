@@ -1,4 +1,5 @@
-import { Volume2, VolumeX, Music, TreePine, Zap } from 'lucide-react'
+import { Volume2, VolumeX, Music, TreePine, Zap, VolumeOff } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useAudioStore } from '@/stores/audioStore'
 
 function VolumeSlider({
@@ -8,6 +9,7 @@ function VolumeSlider({
   muted,
   onChange,
   onToggleMute,
+  disabled,
 }: {
   label: string
   icon: React.ComponentType<{ className?: string }>
@@ -15,15 +17,16 @@ function VolumeSlider({
   muted: boolean
   onChange: (v: number) => void
   onToggleMute: () => void
+  disabled?: boolean
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${disabled ? 'opacity-30 pointer-events-none' : ''}`}>
       <button
         onClick={onToggleMute}
         className={`shrink-0 rounded p-1 transition-colors ${
           muted ? 'text-gray-600' : 'text-gold'
         } hover:bg-navy`}
-        title={`${muted ? 'Unmute' : 'Mute'} ${label}`}
+        title={`${muted ? 'Slå på' : 'Tysta'} ${label}`}
       >
         {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
       </button>
@@ -51,15 +54,45 @@ export function AudioMixer() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-gold">Audio Mixer</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gold">Ljudmixer</h3>
+        <button
+          onClick={store.toggleQuietMode}
+          className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-all ${
+            store.quietMode
+              ? 'bg-red-500/15 text-red-400 border border-red-500/20'
+              : 'bg-gold/10 text-gold/70 border border-gold/15 hover:text-gold'
+          }`}
+          title="Tyst läge (M)"
+        >
+          {store.quietMode ? (
+            <VolumeOff className="h-3 w-3" />
+          ) : (
+            <Volume2 className="h-3 w-3" />
+          )}
+          <span>{store.quietMode ? 'Tyst' : 'Ljud på'}</span>
+          <kbd className="ml-1 rounded bg-navy/50 px-1 py-0.5 font-ui text-[9px] text-mist">M</kbd>
+        </button>
+      </div>
+
+      {store.quietMode && (
+        <motion.div
+          className="rounded-lg border border-red-500/15 bg-red-500/5 px-3 py-2 text-xs text-red-300/70"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+        >
+          Tyst läge aktivt — allt ljud är avstängt. Tryck <kbd className="rounded bg-navy/50 px-1 py-0.5 font-ui text-[9px]">M</kbd> för att slå på igen.
+        </motion.div>
+      )}
 
       <VolumeSlider
         label="Master"
         icon={Volume2}
         value={store.masterVolume}
-        muted={false}
+        muted={store.quietMode}
         onChange={store.setMasterVolume}
-        onToggleMute={() => {}}
+        onToggleMute={store.toggleQuietMode}
+        disabled={store.quietMode}
       />
 
       <div className="h-px bg-navy" />
@@ -68,38 +101,47 @@ export function AudioMixer() {
         label="Ambient"
         icon={TreePine}
         value={store.ambientVolume}
-        muted={store.ambientMuted}
+        muted={store.ambientMuted || store.quietMode}
         onChange={store.setAmbientVolume}
         onToggleMute={store.toggleAmbientMute}
+        disabled={store.quietMode}
       />
 
       <VolumeSlider
-        label="Music"
+        label="Musik"
         icon={Music}
         value={store.musicVolume}
-        muted={store.musicMuted}
+        muted={store.musicMuted || store.quietMode}
         onChange={store.setMusicVolume}
         onToggleMute={store.toggleMusicMute}
+        disabled={store.quietMode}
       />
 
       <VolumeSlider
-        label="SFX"
+        label="Effekter"
         icon={Zap}
         value={store.sfxVolume}
-        muted={store.sfxMuted}
+        muted={store.sfxMuted || store.quietMode}
         onChange={store.setSfxVolume}
         onToggleMute={store.toggleSfxMute}
+        disabled={store.quietMode}
       />
 
-      {store.currentAmbient && (
+      {(store.currentAmbient || store.currentMusic) && (
         <div className="rounded-lg bg-navy/30 px-3 py-2">
-          <p className="text-[10px] uppercase tracking-wider text-gray-500">Now playing</p>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">Spelas nu</p>
           <p className="text-xs text-parchment">
-            <TreePine className="mr-1 inline h-3 w-3 text-green-400" />
-            {store.currentAmbient}
+            {store.currentAmbient && (
+              <>
+                <TreePine className="mr-1 inline h-3 w-3 text-green-400" />
+                {store.currentAmbient}
+              </>
+            )}
+            {store.currentAmbient && store.currentMusic && (
+              <span className="mx-1.5 text-gray-600">·</span>
+            )}
             {store.currentMusic && (
               <>
-                <span className="mx-1.5 text-gray-600">·</span>
                 <Music className="mr-1 inline h-3 w-3 text-purple-400" />
                 {store.currentMusic}
               </>

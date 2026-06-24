@@ -15,6 +15,7 @@ interface AudioState {
   ambientMuted: boolean
   musicMuted: boolean
   sfxMuted: boolean
+  quietMode: boolean
   currentAmbient: AmbientType | null
   currentMusic: MusicMood | null
   unlocked: boolean
@@ -26,6 +27,7 @@ interface AudioState {
   toggleAmbientMute: () => void
   toggleMusicMute: () => void
   toggleSfxMute: () => void
+  toggleQuietMode: () => void
   setCurrentAmbient: (a: AmbientType | null) => void
   setCurrentMusic: (m: MusicMood | null) => void
   setUnlocked: () => void
@@ -41,6 +43,7 @@ export const useAudioStore = create<AudioState>()(
       ambientMuted: false,
       musicMuted: false,
       sfxMuted: false,
+      quietMode: false,
       currentAmbient: null,
       currentMusic: null,
       unlocked: false,
@@ -52,6 +55,7 @@ export const useAudioStore = create<AudioState>()(
       toggleAmbientMute: () => set((s) => ({ ambientMuted: !s.ambientMuted })),
       toggleMusicMute: () => set((s) => ({ musicMuted: !s.musicMuted })),
       toggleSfxMute: () => set((s) => ({ sfxMuted: !s.sfxMuted })),
+      toggleQuietMode: () => set((s) => ({ quietMode: !s.quietMode })),
       setCurrentAmbient: (a) => set({ currentAmbient: a }),
       setCurrentMusic: (m) => set({ currentMusic: m }),
       setUnlocked: () => set({ unlocked: true }),
@@ -66,6 +70,7 @@ export const useAudioStore = create<AudioState>()(
         ambientMuted: s.ambientMuted,
         musicMuted: s.musicMuted,
         sfxMuted: s.sfxMuted,
+        quietMode: s.quietMode,
         currentAmbient: s.currentAmbient,
         currentMusic: s.currentMusic,
       }),

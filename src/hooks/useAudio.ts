@@ -51,15 +51,15 @@ export function useAudio() {
   const store = useAudioStore()
   const {
     masterVolume, ambientVolume, musicVolume, sfxVolume,
-    ambientMuted, musicMuted, sfxMuted,
+    ambientMuted, musicMuted, sfxMuted, quietMode,
     currentAmbient: storedAmbient, currentMusic: storedMusic,
     unlocked, setUnlocked,
     setCurrentAmbient, setCurrentMusic,
   } = store
 
-  const effectiveAmbient = ambientMuted ? 0 : masterVolume * ambientVolume
-  const effectiveMusic = musicMuted ? 0 : masterVolume * musicVolume
-  const effectiveSfx = sfxMuted ? 0 : masterVolume * sfxVolume
+  const effectiveAmbient = (quietMode || ambientMuted) ? 0 : masterVolume * ambientVolume
+  const effectiveMusic = (quietMode || musicMuted) ? 0 : masterVolume * musicVolume
+  const effectiveSfx = (quietMode || sfxMuted) ? 0 : masterVolume * sfxVolume
 
   useEffect(() => {
     ambientRef.current?.volume(effectiveAmbient)

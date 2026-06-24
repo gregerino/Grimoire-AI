@@ -49,6 +49,8 @@ import { NarrativePanel } from '@/components/play/NarrativePanel'
 import { GameSidebar, type SidebarPanel } from '@/components/play/GameSidebar'
 import { PlayerInput } from '@/components/play/PlayerInput'
 import { CombatStartOverlay } from '@/components/play/GameOverlays'
+import { SpeakingIndicator } from '@/components/audio/SpeakingIndicator'
+import { useQuietMode } from '@/hooks/useQuietMode'
 
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
@@ -89,6 +91,7 @@ export function PlayPage() {
     narrative?: string
   } | null>(null)
 
+  const quietMode = useQuietMode()
   const { worldTime, fetchTime } = useTimeStore()
 
   useEffect(() => {
@@ -532,7 +535,12 @@ export function PlayPage() {
 
           <div className="h-3 w-px bg-navy/30" />
 
-          {/* TTS controls */}
+          {/* Quiet mode + TTS controls */}
+          {quietMode && (
+            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] text-red-400 border border-red-500/20">
+              Tyst
+            </span>
+          )}
           <button
             onClick={() => useSpeechStore.getState().setEnabled(!speechEnabled)}
             className={`rounded p-1 transition-colors ${speechEnabled ? 'text-gold' : 'text-mist hover:text-stone'}`}
@@ -633,6 +641,20 @@ export function PlayPage() {
               speechEnabled={speechEnabled}
               onSpeak={(text) => { stopSpeech(); speakPlain(cleanForSpeech(text)) }}
             />
+          )}
+
+          {/* TTS speaking indicator */}
+          {speaking && (
+            <div className="px-6 pb-2">
+              <div className="mx-auto max-w-2xl">
+                <SpeakingIndicator
+                  speaking={speaking}
+                  paused={speechPaused}
+                  onStop={stopSpeech}
+                  onTogglePause={speechPaused ? resumeSpeech : pauseSpeech}
+                />
+              </div>
+            </div>
           )}
 
           {/* Input area */}
