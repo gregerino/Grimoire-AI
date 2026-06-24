@@ -615,7 +615,7 @@ export function PlayPage() {
         <div className="relative flex flex-1 flex-col">
           {/* Location header */}
           <LocationHeader
-            locationName={campaign?.setting}
+            locationName={campaign?.setting ?? undefined}
             timeOfDay={worldTime.timeOfDay}
             timeIcon={TIME_ICONS[worldTime.timeOfDay]}
             day={worldTime.day}

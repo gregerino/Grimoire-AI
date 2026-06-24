@@ -25,7 +25,7 @@ export function NpcTab({ campaignId }: Props) {
   const [selectedNpc, setSelectedNpc] = useState<Npc | null>(null)
   const [search, setSearch] = useState('')
   const [filterDisposition, setFilterDisposition] = useState<Npc['disposition'] | 'all'>('all')
-  const [form, setForm] = useState({ name: '', description: '', race: '', occupation: '', disposition: 'neutral' as const })
+  const [form, setForm] = useState<{ name: string; description: string; race: string; occupation: string; disposition: Npc['disposition'] }>({ name: '', description: '', race: '', occupation: '', disposition: 'neutral' })
 
   const fuse = useMemo(
     () => new Fuse(npcs, { keys: ['name', 'race', 'occupation', 'location', 'description'], threshold: 0.3 }),
