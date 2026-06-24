@@ -101,7 +101,7 @@ jobs:
 
   build-electron:
     needs: [lint-and-typecheck, unit-tests]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.CSC_LINK != ''
     strategy:
       matrix:
         include:
