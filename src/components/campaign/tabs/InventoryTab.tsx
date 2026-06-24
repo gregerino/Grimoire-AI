@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, X, Minus, Search, Sparkles, ChevronDown, ChevronUp, Weight, Coins, GripVertical } from 'lucide-react'
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, DragOverlay } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { supabase } from '@/lib/supabase'
@@ -62,6 +63,7 @@ export function InventoryTab({ campaignId }: Props) {
   const [searchQuery, setSearchQuery] = useState('')
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
   const [form, setForm] = useState(defaultForm)
+  const [activeId, setActiveId] = useState<string | null>(null)
 
   useEffect(() => { fetchCurrency(campaignId) }, [campaignId, fetchCurrency])
 
@@ -252,7 +254,13 @@ export function InventoryTab({ campaignId }: Props) {
           {searchQuery ? 'No items match your search.' : 'No items in inventory.'}
         </p>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={(e) => setActiveId(e.active.id as string)}
+          onDragEnd={(e) => { setActiveId(null); handleDragEnd(e) }}
+          onDragCancel={() => setActiveId(null)}
+        >
           <div className="space-y-3">
             {groupedItems.map(({ category, items: catItems }) => {
               const isCollapsed = collapsedCategories.has(category)
@@ -278,33 +286,60 @@ export function InventoryTab({ campaignId }: Props) {
                       }
                     </span>
                   </button>
-                  {!isCollapsed && (
-                    <SortableContext items={catItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-1">
-                        {catItems.map((item) => (
-                          <SortableItemRow
-                            key={item.id}
-                            item={item}
-                            onToggleEquip={toggleEquipped}
-                            onAdjustQty={adjustQuantity}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  )}
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <SortableContext items={catItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                          <div className="space-y-1">
+                            {catItems.map((item) => (
+                              <SortableItemRow
+                                key={item.id}
+                                item={item}
+                                isDragActive={activeId === item.id}
+                                onToggleEquip={toggleEquipped}
+                                onAdjustQty={adjustQuantity}
+                                onDelete={handleDelete}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )
             })}
           </div>
+
+          <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+            {activeId ? (() => {
+              const item = sortedItems.find((i) => i.id === activeId)
+              if (!item) return null
+              return (
+                <div className="rounded-lg border border-gold/30 bg-dark-navy px-3 py-2.5 shadow-xl shadow-black/50">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{categoryIcons[item.category]}</span>
+                    <span className="text-sm font-medium text-parchment">{item.name}</span>
+                    {item.quantity > 1 && <span className="text-xs text-gray-500">x{item.quantity}</span>}
+                  </div>
+                </div>
+              )
+            })() : null}
+          </DragOverlay>
         </DndContext>
       )}
     </div>
   )
 }
 
-function SortableItemRow({ item, onToggleEquip, onAdjustQty, onDelete }: {
+function SortableItemRow({ item, isDragActive, onToggleEquip, onAdjustQty, onDelete }: {
   item: InventoryItem
+  isDragActive?: boolean
   onToggleEquip: (item: InventoryItem) => void
   onAdjustQty: (item: InventoryItem, delta: number) => void
   onDelete: (id: string) => void
@@ -314,19 +349,24 @@ function SortableItemRow({ item, onToggleEquip, onAdjustQty, onDelete }: {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
   }
 
   const valueStr = formatValue(item.value_gp, item.value_sp, item.value_cp)
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between rounded-lg border border-navy bg-dark-navy px-3 py-2.5"
+      className={`flex items-center justify-between rounded-lg border px-3 py-2.5 transition-colors ${
+        isDragging
+          ? 'border-gold/20 bg-gold/5 opacity-40'
+          : 'border-navy bg-dark-navy'
+      }`}
+      layout
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <button {...attributes} {...listeners} className="cursor-grab touch-none text-gray-600 hover:text-gray-400">
+        <button {...attributes} {...listeners} className="cursor-grab touch-none text-gray-600 hover:text-gold/60 transition-colors">
           <GripVertical className="h-3.5 w-3.5" />
         </button>
         <div className="min-w-0">
@@ -367,7 +407,7 @@ function SortableItemRow({ item, onToggleEquip, onAdjustQty, onDelete }: {
           <Trash2 className="h-3 w-3" />
         </button>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

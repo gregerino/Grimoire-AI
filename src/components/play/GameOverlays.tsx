@@ -154,6 +154,16 @@ export function DeathSaveOverlay({ visible, roll, successes, failures, onComplet
   const isCritSuccess = roll === 20
   const isCritFail = roll === 1
 
+  const resultLabel = isCritSuccess
+    ? 'Nat 20 — You Rise!'
+    : isCritFail
+      ? 'Nat 1 — Two Failures'
+      : isSuccess
+        ? 'Success'
+        : roll != null
+          ? 'Failure'
+          : null
+
   return (
     <AnimatePresence>
       {visible && (
@@ -164,78 +174,162 @@ export function DeathSaveOverlay({ visible, roll, successes, failures, onComplet
           exit={{ opacity: 0 }}
           onAnimationComplete={(def) => {
             if (def === 'exit') return
-            setTimeout(onComplete, 2000)
+            setTimeout(onComplete, 2500)
           }}
         >
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          {/* Dark vignette backdrop */}
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+
+          {/* Blood/gold radial burst */}
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.5, 0.2] }}
+            transition={{ duration: 1.5 }}
+          >
+            <div
+              className={`h-[500px] w-[500px] rounded-full bg-gradient-radial ${
+                isSuccess ? 'from-gold/20 to-transparent' : 'from-blood/20 to-transparent'
+              }`}
+            />
+          </motion.div>
+
           <motion.div
             className="relative z-10 flex flex-col items-center gap-6"
-            initial={{ y: 30, opacity: 0 }}
+            initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5 }}
+            transition={{ type: 'spring', stiffness: 150, damping: 15 }}
           >
+            {/* Skull icon with dramatic glow */}
             <motion.div
               animate={{
                 boxShadow: isSuccess
-                  ? ['0 0 20px rgba(201, 168, 76, 0.3)', '0 0 40px rgba(201, 168, 76, 0.5)', '0 0 20px rgba(201, 168, 76, 0.3)']
-                  : ['0 0 20px rgba(139, 26, 26, 0.3)', '0 0 40px rgba(139, 26, 26, 0.5)', '0 0 20px rgba(139, 26, 26, 0.3)'],
+                  ? [
+                      '0 0 20px rgba(201, 168, 76, 0.2)',
+                      '0 0 60px rgba(201, 168, 76, 0.5)',
+                      '0 0 20px rgba(201, 168, 76, 0.2)',
+                    ]
+                  : [
+                      '0 0 20px rgba(139, 26, 26, 0.2)',
+                      '0 0 60px rgba(139, 26, 26, 0.5)',
+                      '0 0 20px rgba(139, 26, 26, 0.2)',
+                    ],
               }}
               transition={{ duration: 1.5, repeat: Infinity }}
-              className={`rounded-full border-2 p-5 ${isSuccess ? 'border-gold bg-gold/20' : 'border-blood-light bg-blood/20'}`}
+              className={`rounded-full border-2 p-6 ${isSuccess ? 'border-gold bg-gold/20' : 'border-blood-light bg-blood/20'}`}
             >
-              <Skull className={`h-10 w-10 ${isSuccess ? 'text-gold' : 'text-blood-light'}`} />
+              <motion.div
+                animate={
+                  isCritFail
+                    ? { rotate: [0, -15, 15, -10, 10, 0], scale: [1, 1.1, 1] }
+                    : isCritSuccess
+                      ? { rotate: [0, 360], scale: [1, 1.2, 1] }
+                      : {}
+                }
+                transition={{ duration: isCritSuccess ? 0.8 : 0.5, delay: 0.3 }}
+              >
+                <Skull className={`h-12 w-12 ${isSuccess ? 'text-gold' : 'text-blood-light'}`} />
+              </motion.div>
             </motion.div>
 
+            {/* Title */}
             <motion.h2
-              className="font-display text-2xl font-bold uppercase tracking-wider text-parchment"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
+              className="font-display text-3xl font-bold uppercase tracking-[0.2em] text-parchment"
+              initial={{ opacity: 0, letterSpacing: '0.5em' }}
+              animate={{ opacity: 1, letterSpacing: '0.2em' }}
+              transition={{ delay: 0.2, duration: 0.6 }}
             >
               Death Save
             </motion.h2>
 
+            {/* Divider */}
+            <motion.div
+              className={`h-0.5 w-40 bg-gradient-to-r from-transparent ${isSuccess ? 'via-gold/60' : 'via-blood-light/60'} to-transparent`}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+            />
+
+            {/* Roll number */}
             {roll != null && (
-              <motion.div
-                className={`font-display text-5xl font-bold ${
-                  isCritSuccess ? 'text-gold' : isCritFail ? 'text-blood-light' : isSuccess ? 'text-green-400' : 'text-red-400'
-                }`}
-                initial={{ scale: 0 }}
-                animate={{ scale: [0, 1.3, 1] }}
-                transition={{ delay: 0.4, duration: 0.5 }}
-              >
-                {roll}
+              <motion.div className="flex flex-col items-center gap-2">
+                <motion.div
+                  className={`font-display text-6xl font-bold ${
+                    isCritSuccess ? 'text-gold' : isCritFail ? 'text-blood-light' : isSuccess ? 'text-green-400' : 'text-red-400'
+                  }`}
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: [0, 1.4, 1], rotate: 0 }}
+                  transition={{ delay: 0.5, duration: 0.6, type: 'spring', stiffness: 200 }}
+                >
+                  {roll}
+                </motion.div>
+                {resultLabel && (
+                  <motion.span
+                    className={`font-display text-sm tracking-wider ${
+                      isCritSuccess ? 'text-gold' : isCritFail ? 'text-blood-light' : isSuccess ? 'text-green-400' : 'text-red-400'
+                    }`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.8 }}
+                  >
+                    {resultLabel}
+                  </motion.span>
+                )}
               </motion.div>
             )}
 
-            <div className="flex gap-6">
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase tracking-wider text-gray-500">Saves</span>
-                <div className="flex gap-1">
+            {/* Save/Fail dots */}
+            <motion.div
+              className="flex gap-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Saves</span>
+                <div className="flex gap-2">
                   {Array.from({ length: 3 }, (_, i) => (
-                    <div
+                    <motion.div
                       key={i}
-                      className={`h-3 w-3 rounded-full border ${
-                        i < successes ? 'border-green-400 bg-green-400' : 'border-gray-600 bg-transparent'
+                      className={`h-4 w-4 rounded-full border-2 ${
+                        i < successes
+                          ? 'border-green-400 bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]'
+                          : 'border-gray-600 bg-transparent'
                       }`}
+                      initial={false}
+                      animate={
+                        i < successes
+                          ? { scale: [1, 1.2, 1] }
+                          : {}
+                      }
+                      transition={{ delay: 1.1 + i * 0.1 }}
                     />
                   ))}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase tracking-wider text-gray-500">Fails</span>
-                <div className="flex gap-1">
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Fails</span>
+                <div className="flex gap-2">
                   {Array.from({ length: 3 }, (_, i) => (
-                    <div
+                    <motion.div
                       key={i}
-                      className={`h-3 w-3 rounded-full border ${
-                        i < failures ? 'border-red-400 bg-red-400' : 'border-gray-600 bg-transparent'
+                      className={`h-4 w-4 rounded-full border-2 ${
+                        i < failures
+                          ? 'border-red-400 bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]'
+                          : 'border-gray-600 bg-transparent'
                       }`}
+                      initial={false}
+                      animate={
+                        i < failures
+                          ? { scale: [1, 1.2, 1] }
+                          : {}
+                      }
+                      transition={{ delay: 1.1 + i * 0.1 }}
                     />
                   ))}
                 </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}
