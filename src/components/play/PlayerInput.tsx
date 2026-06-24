@@ -39,6 +39,13 @@ export function PlayerInput({
     if (!streaming) inputRef.current?.focus()
   }, [streaming])
 
+  const autoResize = () => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -88,12 +95,12 @@ export function PlayerInput({
             <textarea
               ref={inputRef}
               value={input}
-              onChange={(e) => onInputChange(e.target.value)}
+              onChange={(e) => { onInputChange(e.target.value); autoResize() }}
               onKeyDown={handleKeyDown}
               placeholder="What do you do?"
               aria-label="Beskriv din handling"
-              rows={1}
-              className={`w-full resize-none rounded-2xl border bg-dark-navy/60 px-5 py-3.5 font-body text-base text-parchment placeholder-mist/40 outline-none transition-all focus-ring ${
+              rows={3}
+              className={`w-full resize-none rounded-2xl border bg-dark-navy/60 px-5 py-3.5 font-body text-base text-parchment placeholder-mist/40 outline-none transition-all focus-ring max-h-[200px] ${
                 micListening
                   ? 'border-blood/40 shadow-glow-blood'
                   : 'border-navy/40 focus:border-gold/30 focus:shadow-glow-gold'

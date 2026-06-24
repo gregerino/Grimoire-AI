@@ -144,7 +144,7 @@ export function CampaignPage() {
       </div>
 
       {/* Tabs */}
-      <nav className="mb-6 flex gap-1 rounded-xl border border-navy bg-dark-navy/50 p-1" role="tablist" aria-label="Kampanjflikar">
+      <nav className="mb-6 flex flex-wrap gap-1 rounded-xl border border-navy bg-dark-navy/50 p-1" role="tablist" aria-label="Kampanjflikar">
         {tabs.map((tab) => (
           <button
             key={tab.id}

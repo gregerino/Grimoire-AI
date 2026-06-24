@@ -143,7 +143,7 @@ export function NpcTab({ campaignId }: Props) {
       ) : filtered.length === 0 ? (
         <p className="py-4 text-center text-sm text-gray-600">No NPCs match your search.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="@container grid grid-cols-1 gap-3 @min-[480px]:grid-cols-2">
           {filtered.map((npc) => (
             <NpcCard
               key={npc.id}
@@ -176,7 +176,7 @@ function NpcCard({ npc, onClick, onToggleAlive }: { npc: Npc; onClick: () => voi
   return (
     <div
       onClick={onClick}
-      className={`group cursor-pointer rounded-xl border border-navy bg-dark-navy p-4 transition-all hover:border-gold/20 hover:shadow-card-hover ${!npc.is_alive ? 'opacity-50' : ''}`}
+      className={`group cursor-pointer overflow-hidden rounded-xl border border-navy bg-dark-navy p-4 transition-all hover:border-gold/20 hover:shadow-card-hover ${!npc.is_alive ? 'opacity-50' : ''}`}
     >
       <div className="flex gap-3">
         {/* Portrait */}

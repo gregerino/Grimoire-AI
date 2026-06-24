@@ -49,24 +49,26 @@ export function GameSidebar({ activePanel, onTogglePanel, children }: Props) {
           transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
           {/* Tab bar */}
-          <div className="flex items-center border-b border-navy/50">
-            <div className="flex flex-1 overflow-x-auto scrollbar-hide">
-              {panelTabs.map((tab) => (
-                <TabButton
-                  key={tab.id}
-                  tab={tab}
-                  isActive={activePanel === tab.id}
-                  onToggle={() => onTogglePanel(tab.id)}
-                />
-              ))}
+          <div className="border-b border-navy/50">
+            <div className="flex items-center justify-between px-1 pt-1">
+              <div className="flex flex-wrap flex-1">
+                {panelTabs.map((tab) => (
+                  <TabButton
+                    key={tab.id}
+                    tab={tab}
+                    isActive={activePanel === tab.id}
+                    onToggle={() => onTogglePanel(tab.id)}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={() => onTogglePanel(null)}
+                className="shrink-0 self-start p-2 text-mist transition-colors hover:text-parchment focus-ring"
+                aria-label="Stäng sidopanel"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
             </div>
-            <button
-              onClick={() => onTogglePanel(null)}
-              className="shrink-0 p-2 text-mist transition-colors hover:text-parchment focus-ring"
-              aria-label="Stäng sidopanel"
-            >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
           </div>
 
           {/* Content */}
