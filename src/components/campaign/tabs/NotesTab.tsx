@@ -90,7 +90,6 @@ export function NotesTab({ campaignId, compact }: NotesTabProps) {
           .eq('id', campaignId)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId])
 
   if (!loaded || !editor) return null

@@ -35,7 +35,7 @@ const SFX_PATHS: Record<SfxType, string> = {
   death: '/sounds/sfx/death.mp3',
 }
 
-function createLoop(src: string, volume: number): Howl {
+function createLoop(src: string): Howl {
   return new Howl({ src: [src], loop: true, volume: 0, preload: true })
 }
 
@@ -94,7 +94,7 @@ export function useAudio() {
       ref.current = null
       return
     }
-    const howl = createLoop(newSrc, 0)
+    const howl = createLoop(newSrc)
     ref.current = howl
     howl.once('load', () => {
       howl.play()

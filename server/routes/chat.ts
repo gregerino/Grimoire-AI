@@ -863,7 +863,7 @@ function generateNpcPortraitAsync(npc: {
   occupation?: string | null
   description?: string | null
 }) {
-  const { data: campaign } = supabaseAdmin
+  supabaseAdmin
     .from('campaigns')
     .select('image_generation_enabled')
     .eq('id', npc.campaign_id)

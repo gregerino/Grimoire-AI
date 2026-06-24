@@ -114,7 +114,7 @@ characterRoutes.patch('/:campaignId/rest', async (req: Request, res: Response): 
       const recovered = Math.max(1, Math.floor(hd.max / 2))
       hd.current = Math.min(hd.max, hd.current + recovered)
 
-      let conditions = (charData.activeConditions as string[] | undefined) ?? []
+      const conditions = [...((charData.activeConditions as string[] | undefined) ?? [])]
       const exhIdx = conditions.indexOf('exhaustion')
       if (exhIdx >= 0) conditions.splice(exhIdx, 1)
       charData.activeConditions = conditions

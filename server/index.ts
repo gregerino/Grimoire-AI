@@ -51,6 +51,7 @@ app.get('/api/health', (_req, res) => {
 
 Sentry.setupExpressErrorHandler(app)
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
   console.error('Unhandled error:', err.message)
   res.status(500).json({ error: err.message || 'Internal server error' })

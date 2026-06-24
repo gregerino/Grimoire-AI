@@ -353,7 +353,7 @@ function extractWeapons(f: Record<string, string>): CharacterSheet['weapons'] {
     const wpnNum = i + 1
     let hit = ''
     let damage = ''
-    let notes = f[`Wpn Notes ${wpnNum}`] || ''
+    const notes = f[`Wpn Notes ${wpnNum}`] || ''
 
     // Search for fields with trailing spaces
     for (const [k, v] of Object.entries(f)) {

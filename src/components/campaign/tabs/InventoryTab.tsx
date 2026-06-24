@@ -301,7 +301,7 @@ export function InventoryTab({ campaignId }: Props) {
                               <SortableItemRow
                                 key={item.id}
                                 item={item}
-                                isDragActive={activeId === item.id}
+
                                 onToggleEquip={toggleEquipped}
                                 onAdjustQty={adjustQuantity}
                                 onDelete={handleDelete}
@@ -338,9 +338,8 @@ export function InventoryTab({ campaignId }: Props) {
   )
 }
 
-function SortableItemRow({ item, isDragActive, onToggleEquip, onAdjustQty, onDelete }: {
+function SortableItemRow({ item, onToggleEquip, onAdjustQty, onDelete }: {
   item: InventoryItem
-  isDragActive?: boolean
   onToggleEquip: (item: InventoryItem) => void
   onAdjustQty: (item: InventoryItem, delta: number) => void
   onDelete: (id: string) => void

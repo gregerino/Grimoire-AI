@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Volume2, X } from 'lucide-react'
 
@@ -10,15 +11,14 @@ interface Props {
 }
 
 function WaveBar({ index, paused }: { index: number; paused: boolean }) {
+  const heights = useMemo(() => [4, 12 + Math.random() * 10, 6, 16 + Math.random() * 8, 4], [])
   return (
     <motion.div
       className="w-[3px] rounded-full bg-gold"
       animate={
         paused
           ? { height: 4 }
-          : {
-              height: [4, 12 + Math.random() * 10, 6, 16 + Math.random() * 8, 4],
-            }
+          : { height: heights }
       }
       transition={
         paused

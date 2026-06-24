@@ -41,7 +41,7 @@ import { ReputationPanel } from '@/components/world/ReputationPanel'
 import { MemoryTab } from '@/components/campaign/tabs/MemoryTab'
 import { NotesTab } from '@/components/campaign/tabs/NotesTab'
 import { useInventoryStore } from '@/stores/inventoryStore'
-import { useTimeStore, TIME_ICONS, TIME_LABELS } from '@/stores/timeStore'
+import { useTimeStore, TIME_ICONS } from '@/stores/timeStore'
 import { LootReveal } from '@/components/loot/LootReveal'
 import { toFantasyError } from '@/lib/errors'
 
@@ -198,6 +198,15 @@ export function PlayPage() {
     },
     [speechEnabled, autoRead, enqueueSentence],
   )
+
+  const handleSttTranscript = useCallback((text: string) => {
+    setInput((prev) => {
+      const trimmed = prev.trimEnd()
+      return trimmed ? `${trimmed} ${text}` : text
+    })
+  }, [])
+
+  const handleSttInterim = useCallback(() => {}, [])
 
   if (!id || !user) return null
 
@@ -473,17 +482,6 @@ export function PlayPage() {
       handleSend({ text: `[Skill Check Request] ${text}`, displayText: text, muteResponse: false })
     }
   }
-
-  const handleSttTranscript = useCallback((text: string) => {
-    setInput((prev) => {
-      const trimmed = prev.trimEnd()
-      return trimmed ? `${trimmed} ${text}` : text
-    })
-  }, [])
-
-  const handleSttInterim = useCallback((_text: string) => {
-    // Placeholder feedback handled via micListening state
-  }, [])
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col bg-midnight">
