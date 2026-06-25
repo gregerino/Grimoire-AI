@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Loader2,
   Bot, Volume2, VolumeX, Square, Pause, Play,
-  PanelLeftOpen, PanelLeftClose,
+  PanelLeftOpen, PanelLeftClose, HelpCircle,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCombatStore } from '@/stores/combatStore'
@@ -51,6 +51,7 @@ import { GameSidebar, type SidebarPanel } from '@/components/play/GameSidebar'
 import { PlayerInput } from '@/components/play/PlayerInput'
 import { CombatStartOverlay } from '@/components/play/GameOverlays'
 import { useQuietMode } from '@/hooks/useQuietMode'
+import { HowToGuide } from '@/components/HowToGuide'
 
 import type { Session, Campaign, AiProvider } from '@/types/database'
 
@@ -92,6 +93,7 @@ export function PlayPage() {
   } | null>(null)
 
   const quietMode = useQuietMode()
+  const [showHowTo, setShowHowTo] = useState(false)
   const { worldTime, fetchTime } = useTimeStore()
 
   useEffect(() => {
@@ -504,6 +506,14 @@ export function PlayPage() {
             <ArrowLeft className="h-3 w-3" />
             <span className="hidden sm:inline">Campaign</span>
           </Link>
+          <div className="h-3 w-px bg-navy/30" />
+          <button
+            onClick={() => setShowHowTo(true)}
+            className="rounded p-1 text-mist hover:text-gold transition-colors focus-ring"
+            aria-label="Hur man spelar"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+          </button>
           {campaign && (
             <>
               <div className="h-3 w-px bg-navy/50" />
@@ -677,6 +687,8 @@ export function PlayPage() {
           onPlaySfx={() => playSfx('loot_pickup')}
         />
       )}
+
+      <HowToGuide open={showHowTo} onClose={() => setShowHowTo(false)} />
     </div>
   )
 }

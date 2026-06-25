@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, ScrollText } from 'lucide-react'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { CampaignCard } from '@/components/campaign/CampaignCard'
-import { CreateCampaignModal } from '@/components/campaign/CreateCampaignModal'
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { EditCampaignModal } from '@/components/campaign/EditCampaignModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
@@ -64,11 +64,12 @@ export function DashboardPage() {
         </div>
       )}
 
-      <CreateCampaignModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onCreated={(id) => navigate(`/campaign/${id}`)}
-      />
+      {showCreate && (
+        <OnboardingWizard
+          onComplete={(id) => { setShowCreate(false); navigate(`/campaign/${id}`) }}
+          onClose={() => setShowCreate(false)}
+        />
+      )}
 
       {editTarget && (
         <EditCampaignModal

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen, Brain, Shield, StickyNote } from 'lucide-react'
+import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen, Brain, Shield, StickyNote, HelpCircle } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { supabase } from '@/lib/supabase'
@@ -17,6 +17,7 @@ import { Skeleton, SkeletonList } from '@/components/ui/Skeleton'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SessionHistory } from '@/components/session/SessionHistory'
 import { SessionReader } from '@/components/session/SessionReader'
+import { HowToGuide } from '@/components/HowToGuide'
 import { listSessions } from '@/lib/api'
 import type { Campaign, Session } from '@/types/database'
 
@@ -46,6 +47,7 @@ export function CampaignPage() {
   const [showDelete, setShowDelete] = useState(false)
   const [sessions, setSessions] = useState<Session[]>([])
   const [readingSession, setReadingSession] = useState<Session | null>(null)
+  const [showHowTo, setShowHowTo] = useState(false)
 
   const fetchSessions = useCallback(async () => {
     if (!id) return
@@ -95,13 +97,23 @@ export function CampaignPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link
-        to="/dashboard"
-        className="mb-6 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gold transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to campaigns
-      </Link>
+      <div className="mb-6 flex items-center gap-3">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gold transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to campaigns
+        </Link>
+        <button
+          onClick={() => setShowHowTo(true)}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-stone hover:text-gold hover:bg-navy/50 transition-colors focus-ring"
+          aria-label="Hur man spelar"
+        >
+          <HelpCircle className="h-3.5 w-3.5" />
+          <span>How to</span>
+        </button>
+      </div>
 
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
@@ -211,6 +223,8 @@ export function CampaignPage() {
         onConfirm={handleDelete}
         onCancel={() => setShowDelete(false)}
       />
+
+      <HowToGuide open={showHowTo} onClose={() => setShowHowTo(false)} />
     </div>
   )
 }

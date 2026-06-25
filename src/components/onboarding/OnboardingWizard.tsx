@@ -1,20 +1,44 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { X } from 'lucide-react'
 import { useOnboardingStore } from '@/stores/onboardingStore'
+import { useCampaignStore } from '@/stores/campaignStore'
 import { StepIndicator } from './StepIndicator'
 import { WelcomeStep } from './steps/WelcomeStep'
 import { CampaignStep } from './steps/CampaignStep'
 import { RulebookStep } from './steps/RulebookStep'
 import { CharacterStep } from './steps/CharacterStep'
 
-export function OnboardingWizard() {
-  const { step, nextStep, prevStep, updateData, data, completeOnboarding } = useOnboardingStore()
+interface Props {
+  onComplete: (campaignId: string) => void
+  onClose: () => void
+}
+
+const SETTING_LABELS: Record<string, string> = {
+  'high-fantasy': 'High Fantasy',
+  'dark-fantasy': 'Dark Fantasy',
+  'sword-and-sorcery': 'Sword & Sorcery',
+  'horror': 'Horror',
+}
+
+export function OnboardingWizard({ onComplete, onClose }: Props) {
+  const { step, nextStep, prevStep, updateData, data, setStep } = useOnboardingStore()
+  const { createCampaign } = useCampaignStore()
 
   const handleFinish = async () => {
-    await completeOnboarding()
+    const campaign = await createCampaign({
+      name: data.campaignName || 'New Campaign',
+      description: '',
+      setting: data.setting ? SETTING_LABELS[data.setting] ?? data.setting : '',
+      character_name: '',
+      character_class: '',
+      dm_notes: '',
+    })
+    setStep(0)
+    if (campaign) onComplete(campaign.id)
   }
 
   const handleSkipToEnd = async () => {
-    await completeOnboarding()
+    await handleFinish()
   }
 
   return (
@@ -23,6 +47,14 @@ export function OnboardingWizard() {
         <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-mystic/5 blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-gold/5 blur-3xl" />
       </div>
+
+      <button
+        onClick={() => { setStep(0); onClose() }}
+        className="absolute top-4 right-4 z-10 rounded-lg p-2 text-stone hover:text-parchment hover:bg-navy/50 transition-colors focus-ring"
+        aria-label="Stäng"
+      >
+        <X className="h-5 w-5" />
+      </button>
 
       <div className="relative min-h-screen flex flex-col">
         {step > 0 && (
