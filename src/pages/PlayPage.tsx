@@ -484,7 +484,7 @@ export function PlayPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col bg-midnight">
+    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       {/* ─── Compact header bar ─── */}
       <div className="flex items-center justify-between border-b border-navy/30 bg-midnight/80 backdrop-blur-sm px-4 py-1.5">
         <div className="flex items-center gap-2">

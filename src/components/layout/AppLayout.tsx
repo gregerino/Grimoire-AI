@@ -1,15 +1,25 @@
 import { Outlet, Link } from 'react-router-dom'
 import { LogOut, BookOpen } from 'lucide-react'
+import { BackgroundPicker } from '@/components/settings/BackgroundPicker'
 import { useAuthStore } from '@/stores/authStore'
+import { useBackgroundStore } from '@/stores/backgroundStore'
 import { Avatar } from '@/components/ui/Avatar'
 import logo from '@/assets/logo.png'
 
 export function AppLayout() {
   const { user, signOut } = useAuthStore()
+  const bgSrc = useBackgroundStore((s) => s.getBackgroundSrc)()
 
   return (
-    <div className="flex min-h-screen flex-col bg-midnight">
-      <header className="border-b border-navy bg-dark-navy/80 backdrop-blur-sm">
+    <div className="relative flex min-h-screen flex-col bg-midnight">
+      {bgSrc && (
+        <div
+          className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-[0.07]"
+          style={{ backgroundImage: `url('${bgSrc}')` }}
+          aria-hidden="true"
+        />
+      )}
+      <header className="relative z-10 border-b border-navy bg-dark-navy/80 backdrop-blur-sm">
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4" aria-label="Huvudnavigering">
           <Link to="/dashboard" className="flex items-center gap-2 text-gold hover:text-gold-light transition-colors">
             <img src={logo} alt="Grimoire" className="h-8 w-8" />
@@ -33,6 +43,7 @@ export function AppLayout() {
             <span className="text-sm text-stone font-ui">
               {user?.user_metadata?.full_name || user?.email}
             </span>
+            <BackgroundPicker />
             <button
               onClick={signOut}
               className="rounded-md p-1.5 text-mist hover:bg-navy hover:text-parchment transition-colors focus-ring"
@@ -44,7 +55,7 @@ export function AppLayout() {
         </nav>
       </header>
 
-      <main className="flex-1">
+      <main className="relative z-10 flex-1">
         <Outlet />
       </main>
     </div>
