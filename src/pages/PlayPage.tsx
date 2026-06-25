@@ -45,7 +45,6 @@ import { useTimeStore, TIME_ICONS } from '@/stores/timeStore'
 import { LootReveal } from '@/components/loot/LootReveal'
 import { toFantasyError } from '@/lib/errors'
 
-import { LocationHeader } from '@/components/play/LocationHeader'
 import { NarrativePanel } from '@/components/play/NarrativePanel'
 import { GameSidebar, type SidebarPanel } from '@/components/play/GameSidebar'
 import { PlayerInput } from '@/components/play/PlayerInput'
@@ -523,6 +522,21 @@ export function PlayPage() {
               <span className="text-[10px] text-mist">
                 Lvl {campaign.character_level} {campaign.character_class}
               </span>
+              {campaign.setting && (
+                <>
+                  <div className="h-3 w-px bg-navy/50 hidden sm:block" />
+                  <span className="hidden sm:inline text-[10px] text-stone">
+                    {campaign.setting}
+                  </span>
+                </>
+              )}
+              {worldTime.day != null && (
+                <>
+                  <span className="text-[10px] text-mist/60">
+                    {TIME_ICONS[worldTime.timeOfDay]} Day {worldTime.day}
+                  </span>
+                </>
+              )}
             </>
           )}
         </div>
@@ -622,14 +636,6 @@ export function PlayPage() {
 
         {/* Right: Narrative area */}
         <div className="relative flex flex-1 flex-col">
-          {/* Location header */}
-          <LocationHeader
-            locationName={campaign?.setting ?? undefined}
-            timeOfDay={worldTime.timeOfDay}
-            timeIcon={TIME_ICONS[worldTime.timeOfDay]}
-            day={worldTime.day}
-          />
-
           {/* Session reader overlay */}
           {readingSession && (
             <SessionReader
