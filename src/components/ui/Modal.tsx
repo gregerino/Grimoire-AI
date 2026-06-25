@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface Props {
@@ -57,7 +58,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: P
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
@@ -68,7 +69,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: P
       <div
         ref={dialogRef}
         className={`
-          w-full ${sizeStyles[size]}
+          w-full ${sizeStyles[size]} max-h-[90vh] overflow-y-auto
           rounded-xl border border-navy bg-dark-navy shadow-card
           animate-in fade-in zoom-in-95 duration-200
         `}
@@ -99,6 +100,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: P
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
