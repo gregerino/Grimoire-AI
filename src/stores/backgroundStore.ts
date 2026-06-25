@@ -21,18 +21,18 @@ export const BACKGROUNDS: BackgroundOption[] = [
 
 interface BackgroundState {
   backgroundId: string
+  backgroundSrc: string
   setBackground: (id: string) => void
-  getBackgroundSrc: () => string
 }
 
 export const useBackgroundStore = create<BackgroundState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       backgroundId: 'village',
-      setBackground: (id) => set({ backgroundId: id }),
-      getBackgroundSrc: () => {
-        const bg = BACKGROUNDS.find((b) => b.id === get().backgroundId)
-        return bg?.src ?? ''
+      backgroundSrc: '/bg-village.jpg',
+      setBackground: (id) => {
+        const bg = BACKGROUNDS.find((b) => b.id === id)
+        set({ backgroundId: id, backgroundSrc: bg?.src ?? '' })
       },
     }),
     { name: 'grimoire-background' },

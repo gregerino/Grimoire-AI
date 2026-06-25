@@ -8,7 +8,7 @@ import logo from '@/assets/logo.png'
 
 export function AppLayout() {
   const { user, signOut } = useAuthStore()
-  const bgSrc = useBackgroundStore((s) => s.getBackgroundSrc)()
+  const bgSrc = useBackgroundStore((s) => s.backgroundSrc)
 
   return (
     <div className="relative flex min-h-screen flex-col bg-midnight">
