@@ -17,7 +17,7 @@ export function BackgroundPicker() {
         <ImageIcon className="h-4 w-4" />
       </button>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Bakgrundsbild" size="lg">
+      <Modal open={open} onClose={() => setOpen(false)} title="Bakgrundsbild" size="xl">
         <div className="grid grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-1">
           {BACKGROUNDS.map((bg) => {
             const selected = backgroundId === bg.id
