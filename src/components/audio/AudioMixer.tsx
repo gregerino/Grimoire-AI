@@ -1,6 +1,7 @@
-import { Volume2, VolumeX, Music, TreePine, Zap, VolumeOff } from 'lucide-react'
+import { Volume2, VolumeX, Music, TreePine, Zap, VolumeOff, Mic } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAudioStore } from '@/stores/audioStore'
+import { useSpeechStore } from '@/stores/speechStore'
 
 function VolumeSlider({
   label,
@@ -53,6 +54,9 @@ function VolumeSlider({
 
 export function AudioMixer() {
   const store = useAudioStore()
+  const speechEnabled = useSpeechStore((s) => s.enabled)
+  const ttsVolume = useSpeechStore((s) => s.ttsVolume)
+  const setTtsVolume = useSpeechStore((s) => s.setTtsVolume)
 
   return (
     <div className="space-y-4">
@@ -128,6 +132,18 @@ export function AudioMixer() {
         onToggleMute={store.toggleSfxMute}
         disabled={store.quietMode}
       />
+
+      {speechEnabled && (
+        <VolumeSlider
+          label="Röst (TTS)"
+          icon={Mic}
+          value={ttsVolume}
+          muted={store.quietMode}
+          onChange={setTtsVolume}
+          onToggleMute={store.toggleQuietMode}
+          disabled={store.quietMode}
+        />
+      )}
 
       {(store.currentAmbient || store.currentMusic) && (
         <div className="rounded-lg bg-navy/30 px-3 py-2">

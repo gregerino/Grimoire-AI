@@ -32,10 +32,10 @@ export function updateSession(sessionId: string, updates: Record<string, unknown
   })
 }
 
-export function summarizeSession(sessionId: string, campaignId: string, characterName?: string) {
+export function summarizeSession(sessionId: string, campaignId: string, characterName?: string, userId?: string) {
   return jsonFetch(`${API_BASE}/session/${sessionId}/summarize`, {
     method: 'POST',
-    body: JSON.stringify({ campaign_id: campaignId, character_name: characterName }),
+    body: JSON.stringify({ campaign_id: campaignId, character_name: characterName, ...(userId && { user_id: userId }) }),
   })
 }
 
@@ -305,10 +305,10 @@ export function performRest(
 
 // --- NPC ---
 
-export function aiUpdateNpc(npcId: string, context: string) {
+export function aiUpdateNpc(npcId: string, context: string, userId?: string) {
   return jsonFetch(`${API_BASE}/npc/${npcId}/ai-update`, {
     method: 'POST',
-    body: JSON.stringify({ context }),
+    body: JSON.stringify({ context, ...(userId && { user_id: userId }) }),
   })
 }
 
@@ -453,10 +453,10 @@ export function deleteMemory(id: string) {
 
 // --- Tavern ---
 
-export function generateTavern(campaignId: string, regionName?: string) {
+export function generateTavern(campaignId: string, regionName?: string, userId?: string) {
   return jsonFetch(`${API_BASE}/tavern/generate`, {
     method: 'POST',
-    body: JSON.stringify({ campaign_id: campaignId, region_name: regionName }),
+    body: JSON.stringify({ campaign_id: campaignId, region_name: regionName, ...(userId && { user_id: userId }) }),
   })
 }
 

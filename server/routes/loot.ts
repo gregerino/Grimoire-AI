@@ -1,12 +1,8 @@
 import { Router, Request, Response } from 'express'
-import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from 'openai'
 import { supabaseAdmin } from '../lib/supabase-admin'
 import { withRetry } from '../lib/retry'
+import { openai, resolveProvider, createCompletion } from '../lib/ai-provider'
 import { resolveFateRoll, type FateResult } from '../../src/lib/fate-chart'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export const lootRoutes = Router()
 
@@ -44,7 +40,9 @@ function determineLootQuality(fateResult: FateResult): { rarityPool: string[]; i
 
 lootRoutes.post('/generate', async (req: Request, res: Response) => {
   try {
-    const { campaign_id, monster_name, monster_cr, context, chaos_factor = 5 } = req.body
+    const { campaign_id, monster_name, monster_cr, context, chaos_factor = 5, user_id } = req.body
+
+    const provider = resolveProvider(user_id)
 
     if (!campaign_id || !monster_name) {
       res.status(400).json({ error: 'Missing campaign_id or monster_name' })
@@ -119,17 +117,15 @@ Rules:
 - The narrative should feel like a discovery moment — dramatic and immersive
 - Weight in pounds, following D&D 5e standards`
 
-    const response = await withRetry(
-      () => anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
+    const text = await withRetry(
+      () => createCompletion({
+        provider,
+        maxTokens: 1024,
         temperature: 0.8,
         messages: [{ role: 'user', content: prompt }],
       }),
       { maxRetries: 2, timeoutMs: 30_000 },
     )
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
     const lootData: LootResult = { ...JSON.parse(text), fateResult: fateResult.result }
 
     if (lootData.items.length > 0) {

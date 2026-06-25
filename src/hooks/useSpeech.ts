@@ -70,6 +70,7 @@ export function useSpeech() {
 
       const audio = new Audio(url)
       audio.playbackRate = 1.0
+      audio.volume = useSpeechStore.getState().ttsVolume
       audioRef.current = audio
 
       await new Promise<void>((resolve) => {

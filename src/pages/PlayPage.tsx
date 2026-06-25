@@ -50,7 +50,6 @@ import { NarrativePanel } from '@/components/play/NarrativePanel'
 import { GameSidebar, type SidebarPanel } from '@/components/play/GameSidebar'
 import { PlayerInput } from '@/components/play/PlayerInput'
 import { CombatStartOverlay } from '@/components/play/GameOverlays'
-import { SpeakingIndicator } from '@/components/audio/SpeakingIndicator'
 import { useQuietMode } from '@/hooks/useQuietMode'
 
 import type { Session, Campaign, AiProvider } from '@/types/database'
@@ -104,7 +103,7 @@ export function PlayPage() {
     if (autoSavingRef.current || !currentSession || !id || messages.length === 0) return
     autoSavingRef.current = true
     try {
-      await summarizeSession(currentSession.id, id, campaign?.character_name ?? undefined)
+      await summarizeSession(currentSession.id, id, campaign?.character_name ?? undefined, user?.id)
     } catch {
       await updateSession(currentSession.id, { ended_at: new Date().toISOString() })
     }
@@ -455,7 +454,7 @@ export function PlayPage() {
     autoSavingRef.current = true
     setSummarizing(true)
     try {
-      await summarizeSession(currentSession.id, id, campaign?.character_name ?? undefined)
+      await summarizeSession(currentSession.id, id, campaign?.character_name ?? undefined, user?.id)
     } catch {
       await updateSession(currentSession.id, { ended_at: new Date().toISOString() })
     }
@@ -643,20 +642,6 @@ export function PlayPage() {
               speechEnabled={speechEnabled}
               onSpeak={(text) => { stopSpeech(); speakPlain(cleanForSpeech(text)) }}
             />
-          )}
-
-          {/* TTS speaking indicator */}
-          {speaking && (
-            <div className="px-6 pb-2">
-              <div className="mx-auto max-w-2xl">
-                <SpeakingIndicator
-                  speaking={speaking}
-                  paused={speechPaused}
-                  onStop={stopSpeech}
-                  onTogglePause={speechPaused ? resumeSpeech : pauseSpeech}
-                />
-              </div>
-            </div>
           )}
 
           {/* Input area */}

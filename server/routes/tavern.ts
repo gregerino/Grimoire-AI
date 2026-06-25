@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express'
-import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '../lib/supabase-admin'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { resolveProvider, createCompletion } from '../lib/ai-provider'
 
 export const tavernRoutes = Router()
 
@@ -28,11 +26,13 @@ interface TavernResult {
 
 tavernRoutes.post('/generate', async (req: Request, res: Response) => {
   try {
-    const { campaign_id, region_name } = req.body
+    const { campaign_id, region_name, user_id } = req.body
     if (!campaign_id) {
       res.status(400).json({ error: 'Missing campaign_id' })
       return
     }
+
+    const provider = resolveProvider(user_id)
 
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
@@ -43,9 +43,9 @@ tavernRoutes.post('/generate', async (req: Request, res: Response) => {
     const setting = campaign?.setting || 'Standard fantasy'
     const region = region_name || setting
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+    const text = await createCompletion({
+      provider,
+      maxTokens: 1024,
       messages: [{
         role: 'user',
         content: `Generate a unique fantasy tavern for the region "${region}" in a ${setting} setting. Include:
@@ -69,7 +69,6 @@ Return ONLY valid JSON with this exact structure, no other text:
       }],
     })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       res.status(500).json({ error: 'Failed to parse tavern response' })

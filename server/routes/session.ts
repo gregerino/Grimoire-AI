@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express'
-import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '../lib/supabase-admin'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { resolveProvider, createCompletion } from '../lib/ai-provider'
 
 export const sessionRoutes = Router()
 
@@ -112,7 +110,9 @@ sessionRoutes.get('/:id/messages', async (req: Request, res: Response) => {
 // POST /api/session/:id/summarize — generate a diary-style summary
 sessionRoutes.post('/:id/summarize', async (req: Request, res: Response) => {
   const { id } = req.params
-  const { campaign_id, character_name } = req.body
+  const { campaign_id, character_name, user_id } = req.body
+
+  const provider = resolveProvider(user_id)
 
   const { data: msgs } = await supabaseAdmin
     .from('messages')
@@ -129,9 +129,9 @@ sessionRoutes.post('/:id/summarize', async (req: Request, res: Response) => {
     .map((m: { role: string; content: string }) => `${m.role === 'user' ? 'PLAYER' : 'DM'}: ${m.content}`)
     .join('\n\n')
 
-  const result = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
+  const raw = await createCompletion({
+    provider,
+    maxTokens: 1024,
     messages: [
       {
         role: 'user',
@@ -146,8 +146,6 @@ ${transcript}`,
       },
     ],
   })
-
-  const raw = result.content[0].type === 'text' ? result.content[0].text : ''
   const titleMatch = raw.match(/^TITLE:\s*(.+)/m)
   const title = titleMatch ? titleMatch[1].trim().replace(/^["']|["']$/g, '') : 'Untitled Session'
   const summary = raw.replace(/^TITLE:\s*.+\n+/m, '').trim()

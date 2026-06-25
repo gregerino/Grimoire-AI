@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Sparkles, Loader2, Skull, Heart, MapPin, BookOpen, Users, History } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { aiUpdateNpc } from '@/lib/api'
+import { useAuthStore } from '@/stores/authStore'
 import { NpcPortrait } from './NpcPortrait'
 import { NpcInteractionHistory } from './NpcInteractionHistory'
 import type { Npc } from '@/types/database'
@@ -20,6 +21,7 @@ const dispositionColors = {
 }
 
 export function NpcDetailModal({ npc, open, onClose, onUpdated }: Props) {
+  const user = useAuthStore((s) => s.user)
   const [editing, setEditing] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiContext, setAiContext] = useState('')
@@ -50,7 +52,7 @@ export function NpcDetailModal({ npc, open, onClose, onUpdated }: Props) {
     if (!aiContext.trim()) return
     setAiLoading(true)
     try {
-      const { npc: updated } = await aiUpdateNpc(npc.id, aiContext)
+      const { npc: updated } = await aiUpdateNpc(npc.id, aiContext, user?.id)
       if (updated) {
         onUpdated(updated)
         setForm({

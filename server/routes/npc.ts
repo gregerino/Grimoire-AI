@@ -1,15 +1,15 @@
 import { Router, Request, Response } from 'express'
-import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '../lib/supabase-admin'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { resolveProvider, createCompletion } from '../lib/ai-provider'
 
 export const npcRoutes = Router()
 
 // POST /api/npc/:id/ai-update — AI-driven NPC update based on session context
 npcRoutes.post('/:id/ai-update', async (req: Request, res: Response) => {
   const { id } = req.params
-  const { context } = req.body
+  const { context, user_id } = req.body
+
+  const provider = resolveProvider(user_id)
 
   const { data: npc, error } = await supabaseAdmin
     .from('npcs')
@@ -22,9 +22,9 @@ npcRoutes.post('/:id/ai-update', async (req: Request, res: Response) => {
     return
   }
 
-  const result = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
+  const text = await createCompletion({
+    provider,
+    maxTokens: 1024,
     messages: [
       {
         role: 'user',
@@ -51,8 +51,6 @@ Example: {"disposition": "friendly", "relationship": "The party saved her villag
       },
     ],
   })
-
-  const text = result.content[0].type === 'text' ? result.content[0].text : '{}'
 
   let updates: Record<string, unknown>
   try {

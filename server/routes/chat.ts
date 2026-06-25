@@ -1,14 +1,11 @@
 import { Router, Request, Response } from 'express'
-import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from 'openai'
 import crypto from 'crypto'
+import OpenAI from 'openai'
 import { supabaseAdmin } from '../lib/supabase-admin'
 import { withRetry } from '../lib/retry'
+import { anthropic, openai, resolveProvider } from '../lib/ai-provider'
 import { buildSystemPrompt, MAX_HISTORY_MESSAGES, MAX_RESPONSE_TOKENS, type WorldContext } from '../prompts/dm-system'
 import type { Campaign, AiProvider } from '../../src/types/database'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export const chatRoutes = Router()
 
@@ -150,10 +147,11 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
       activeQuests: activeQuests.map((q) => ({ title: q.title, status: q.status, description: q.description })),
     }
 
-    const provider: AiProvider =
+    const campaignProvider: AiProvider =
       overrideProvider === 'openai' || overrideProvider === 'claude'
         ? overrideProvider
         : campaign?.ai_provider ?? 'claude'
+    const provider = resolveProvider(req.body.user_id, campaignProvider)
 
     let activeConditions: string[] = []
     if (campaign) {
