@@ -922,7 +922,6 @@ function generateNpcPortraitAsync(npc: {
         console.error('Auto portrait generation failed:', err instanceof Error ? err.message : err)
       }
     })
-  void data
 }
 
 function generateLocationImageAsync(location: {
