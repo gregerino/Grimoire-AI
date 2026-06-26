@@ -207,8 +207,11 @@ characterRoutes.post('/sync-dndb', async (req: Request, res: Response): Promise<
       const inventoryItems = character.equipment.map((item) => {
         const e = item as { name: string; qty: number; weight: string; filterType?: string; equipped?: boolean }
         const category = dndbFilterType[e.filterType ?? ''] ?? 'other'
-        const weight = parseFloat(e.weight ?? '0') || 0
+        const rawWeight = parseFloat(e.weight ?? '0') || 0
         const qty = e.qty ?? 1
+        // D&D Beyond stores bulk items (e.g. 1000 ball bearings) with weight = total bag weight,
+        // not per-unit weight. Divide to get correct per-unit weight for our weight * qty calculation.
+        const weight = qty > 100 ? rawWeight / qty : rawWeight
         console.log(`[dndb-sync] ${e.name}: weight=${weight} qty=${qty} total=${weight * qty}`)
         return {
           campaign_id,
