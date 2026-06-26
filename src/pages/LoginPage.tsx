@@ -2,9 +2,11 @@ import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Card } from '@/components/ui/Card'
 import logo from '@/assets/logo.png'
+import { useBackgroundStore } from '@/stores/backgroundStore'
 
 export function LoginPage() {
   const { user, loading, signInWithGoogle } = useAuthStore()
+  const { backgroundSrc } = useBackgroundStore()
 
   if (loading) {
     return (
@@ -19,8 +21,12 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-midnight px-4">
-      <div className="w-full max-w-sm">
+    <main
+      className="relative flex min-h-screen items-center justify-center px-4"
+      style={backgroundSrc ? { backgroundImage: `url(${backgroundSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { backgroundColor: 'var(--color-midnight)' }}
+    >
+      {backgroundSrc && <div className="absolute inset-0 bg-black/70" />}
+      <div className="relative w-full max-w-sm">
         <div className="mb-8 text-center">
           <img src={logo} alt="Grimoire" className="mx-auto mb-4 h-28 w-28 drop-shadow-[0_0_15px_rgba(201,168,76,0.3)]" />
           <h1 className="text-3xl font-display font-bold text-parchment tracking-wide">Grimoire</h1>
