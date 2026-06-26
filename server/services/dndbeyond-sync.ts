@@ -252,6 +252,7 @@ function mapToCharacterSheet(data: DndbCharacterData): CharacterSheet {
 
   const conMod = abilityMod(stats.CON)
   const maxHp = (data.overrideHitPoints ?? data.baseHitPoints) + (conMod * level) + (data.bonusHitPoints ?? 0)
+  console.log('[DnDB HP debug]', JSON.stringify({ baseHitPoints: data.baseHitPoints, overrideHitPoints: data.overrideHitPoints, bonusHitPoints: data.bonusHitPoints, CON: stats.CON, conMod, level, maxHp }))
 
   const allModifiers = [
     ...(data.modifiers?.race ?? []),
