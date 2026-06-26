@@ -1,14 +1,14 @@
 {
-  "buildCommand": "vite build && node_modules/.bin/esbuild api/_handler.ts --bundle --platform=node --format=cjs --packages=external --outfile=api/index.cjs",
+  "buildCommand": "vite build",
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "api/index.cjs": {
+    "api/_handler.ts": {
       "maxDuration": 60
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/api/(.*)", "destination": "/api/_handler" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
