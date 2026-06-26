@@ -16,7 +16,7 @@ export async function parsePdfToChunks(
 ): Promise<Chunk[]> {
   // Dynamic import so pdf-parse doesn't crash the server at startup
   // (it requires DOMMatrix which isn't available in serverless environments)
-  const pdfParse = (await import('pdf-parse')).default as unknown as (buf: Buffer) => Promise<{ text: string }>
+  const pdfParse = (await import('pdf-parse')).default as unknown as (buf: Buffer) => Promise<{ text: string; numpages: number }>
   const result = await pdfParse(buffer)
 
   if (!result.text.trim()) {
