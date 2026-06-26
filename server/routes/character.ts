@@ -187,6 +187,42 @@ characterRoutes.post('/sync-dndb', async (req: Request, res: Response): Promise<
       })
       .eq('id', campaign_id)
 
+    // Sync equipment to inventory — remove old D&D Beyond items, insert fresh
+    await supabaseAdmin
+      .from('inventory_items')
+      .delete()
+      .eq('campaign_id', campaign_id)
+      .eq('properties->>source', 'dndbeyond')
+
+    if (character.equipment.length > 0) {
+      const dndbFilterType: Record<string, string> = {
+        Weapon: 'weapon',
+        Armor: 'armor',
+        Potion: 'potion',
+        Scroll: 'scroll',
+        Gear: 'gear',
+        Tool: 'tool',
+        'Magic Item': 'treasure',
+      }
+
+      const inventoryItems = character.equipment.map((item) => {
+        const e = item as { name: string; qty: number; weight: string; filterType?: string; equipped?: boolean }
+        const category = dndbFilterType[e.filterType ?? ''] ?? 'other'
+        return {
+          campaign_id,
+          name: e.name,
+          category,
+          quantity: e.qty ?? 1,
+          weight: parseFloat(e.weight ?? '0') || 0,
+          is_equipped: e.equipped ?? false,
+          rarity: 'common' as const,
+          properties: { source: 'dndbeyond' },
+        }
+      })
+
+      await supabaseAdmin.from('inventory_items').insert(inventoryItems)
+    }
+
     res.json({ character: { ...character, dndbeyondId: characterId }, synced: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to sync from D&D Beyond'

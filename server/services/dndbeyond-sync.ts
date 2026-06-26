@@ -350,6 +350,8 @@ function mapToCharacterSheet(data: DndbCharacterData): CharacterSheet {
     name: item.definition.name,
     qty: item.quantity,
     weight: String(item.definition.weight ?? 0),
+    filterType: item.definition.filterType ?? 'other',
+    equipped: item.equipped ?? false,
   }))
 
   // Weapons
