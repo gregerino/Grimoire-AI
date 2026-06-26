@@ -1,20 +1,29 @@
-import { useState } from 'react'
-import { ImageIcon, Loader2, RefreshCw, X, Maximize2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ImageIcon, Loader2, RefreshCw, Maximize2 } from 'lucide-react'
 import { generateNpcPortrait } from '@/lib/api'
+import { Lightbox } from '@/components/ui/Lightbox'
 
 interface Props {
   npcId: string
   portraitUrl: string | null
   name: string
+  campaignImageEnabled?: boolean
   sessionId?: string | null
   onPortraitGenerated?: (url: string) => void
 }
 
-export function NpcPortrait({ npcId, portraitUrl, name, sessionId, onPortraitGenerated }: Props) {
+export function NpcPortrait({ npcId, portraitUrl, name, campaignImageEnabled = true, sessionId, onPortraitGenerated }: Props) {
   const [url, setUrl] = useState(portraitUrl)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
   const [lightbox, setLightbox] = useState(false)
+
+  useEffect(() => {
+    if (!url && campaignImageEnabled && !loading && !error) {
+      generate()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [npcId])
 
   const generate = async (e?: React.MouseEvent) => {
     e?.stopPropagation()
@@ -59,53 +68,33 @@ export function NpcPortrait({ npcId, portraitUrl, name, sessionId, onPortraitGen
         </div>
 
         {lightbox && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-            onClick={() => setLightbox(false)}
-          >
-            <button
-              className="absolute top-4 right-4 rounded-lg bg-black/60 p-2 text-gray-300 hover:text-white transition-colors"
-              onClick={() => setLightbox(false)}
-              aria-label="Stäng"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <img
-              src={url}
-              alt={`Portrait of ${name}`}
-              className="max-h-[90vh] max-w-[90vw] rounded-xl border border-navy object-contain shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-gray-400">{name}</p>
-          </div>
+          <Lightbox src={url} alt={`Portrait of ${name}`} label={name} onClose={() => setLightbox(false)} />
         )}
       </>
     )
   }
 
   return (
-    <button
-      onClick={() => generate()}
-      disabled={loading}
-      className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-navy bg-dark-navy/50 transition-colors hover:border-gold/30 hover:bg-navy/30 disabled:opacity-50"
-      title="Generate portrait"
-    >
+    <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-navy bg-dark-navy/50">
       {loading ? (
         <>
           <Loader2 className="h-6 w-6 animate-spin text-gold/50" />
           <span className="text-[10px] text-gray-500">Generating...</span>
         </>
       ) : error ? (
-        <>
+        <button
+          onClick={() => generate()}
+          className="flex flex-col items-center gap-2 transition-opacity hover:opacity-80"
+        >
           <ImageIcon className="h-6 w-6 text-red-400/50" />
           <span className="text-[10px] text-red-400/60">Failed — tap to retry</span>
-        </>
+        </button>
       ) : (
         <>
           <ImageIcon className="h-6 w-6 text-gray-600" />
-          <span className="text-[10px] text-gray-600">Generate portrait</span>
+          <span className="text-[10px] text-gray-600">Generating...</span>
         </>
       )}
-    </button>
+    </div>
   )
 }

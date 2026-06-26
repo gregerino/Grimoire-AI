@@ -5,6 +5,7 @@ import {
   Castle, Swords, TreePine, Landmark, Waves, Shield, Church, Home,
   Mountain, Building2,
 } from 'lucide-react'
+import { Lightbox } from '@/components/ui/Lightbox'
 import Fuse from 'fuse.js'
 import { supabase } from '@/lib/supabase'
 import { useWorldStore } from '@/stores/worldStore'
@@ -422,6 +423,13 @@ function LocationDetail({
     setEditType(location.type)
   }, [location])
 
+  useEffect(() => {
+    if (!location.image_url && !generatingImage) {
+      onGenerateImage()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.id])
+
   const handleSaveEdit = () => {
     if (editName.trim() !== location.name) onSaveField(location, 'name', editName.trim())
     if (editDesc !== (location.description ?? '')) onSaveField(location, 'description', editDesc)
@@ -493,44 +501,24 @@ function LocationDetail({
               <Maximize2 className="h-6 w-6 text-white drop-shadow" />
             </div>
           </div>
-
           {lightbox && (
-            <div
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-              onClick={() => setLightbox(false)}
-            >
-              <button
-                className="absolute top-4 right-4 rounded-lg bg-black/60 p-2 text-gray-300 hover:text-white transition-colors"
-                onClick={() => setLightbox(false)}
-                aria-label="Stäng"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <img
-                src={location.image_url}
-                alt={location.name}
-                className="max-h-[90vh] max-w-[90vw] rounded-xl border border-navy object-contain shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-gray-400">{location.name}</p>
-            </div>
+            <Lightbox src={location.image_url} alt={location.name} label={location.name} onClose={() => setLightbox(false)} />
           )}
         </>
       ) : (
-        <button
-          onClick={onGenerateImage}
-          disabled={generatingImage}
-          className="w-full h-24 border-2 border-dashed border-navy rounded-lg flex flex-col items-center justify-center gap-1.5 hover:border-gray-500 transition-colors disabled:opacity-50"
-        >
+        <div className="w-full h-24 border-2 border-dashed border-navy rounded-lg flex flex-col items-center justify-center gap-1.5">
           {generatingImage ? (
-            <Loader2 className="h-5 w-5 text-gray-500 animate-spin" />
+            <>
+              <Loader2 className="h-5 w-5 text-gray-500 animate-spin" />
+              <span className="text-xs text-gray-500">Genererar...</span>
+            </>
           ) : (
-            <Image className="h-5 w-5 text-gray-500" />
+            <>
+              <Image className="h-5 w-5 text-gray-500" />
+              <span className="text-xs text-gray-500">Generera bild</span>
+            </>
           )}
-          <span className="text-xs text-gray-500">
-            {generatingImage ? 'Genererar...' : 'Generera bild'}
-          </span>
-        </button>
+        </div>
       )}
 
       {/* Description */}
