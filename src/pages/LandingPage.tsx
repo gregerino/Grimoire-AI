@@ -24,7 +24,7 @@ function ChatMockup() {
           <div className="w-3 h-3 rounded-full bg-gold/40" />
           <div className="w-3 h-3 rounded-full bg-mystic/40" />
         </div>
-        <span className="ml-2 text-xs font-ui text-mist/50 tracking-wide">Grimoire — The Ashwood Forest</span>
+        <span className="ml-2 text-xs font-ui text-mist/50 tracking-wide">Grimoire: The Ashwood Forest</span>
       </div>
 
       {/* Chat area */}
@@ -33,7 +33,7 @@ function ChatMockup() {
         <div className="space-y-1">
           <p className="text-xs font-ui text-gold/50 uppercase tracking-wider">Dungeon Master</p>
           <div className="rounded-lg bg-[#1a1a2e] p-3 text-parchment-dark leading-relaxed">
-            The forest closes in around you. Ancient oaks stretch their branches like claws against the pale moon. Suddenly you hear a rustling from the bushes to your left —{' '}
+            The forest closes in around you. Ancient oaks stretch their branches like claws against the pale moon. Suddenly you hear a rustling from the bushes to your left;{' '}
             <span className="text-gold">three pairs of eyes gleam red in the darkness.</span>
           </div>
         </div>
@@ -49,7 +49,7 @@ function ChatMockup() {
         <div className="space-y-1">
           <p className="text-xs font-ui text-gold/50 uppercase tracking-wider">Dungeon Master</p>
           <div className="rounded-lg bg-[#1a1a2e] p-3 text-parchment-dark leading-relaxed">
-            Three werewolves step from the shadows. Their leader — a massive beast with a scarred face — lets out a low growl.{' '}
+            Three werewolves step from the shadows. Their leader, a massive beast with a scarred face, lets out a low growl.{' '}
             <span className="text-blood-light font-semibold">Roll initiative.</span>
           </div>
         </div>
@@ -201,12 +201,12 @@ function AudioMockup() {
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
       </svg>
     )},
-    { label: 'Ambient', sub: 'Dungeon — torchlight & drips', pct: 45, color: 'bg-mystic-light', icon: (
+    { label: 'Ambient', sub: 'Dungeon: torchlight & drips', pct: 45, color: 'bg-mystic-light', icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4 text-mystic-light">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z" />
       </svg>
     )},
-    { label: 'Music', sub: 'Combat — tense strings', pct: 60, color: 'bg-blood-light', icon: (
+    { label: 'Music', sub: 'Combat: tense strings', pct: 60, color: 'bg-blood-light', icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4 text-blood-light">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
       </svg>
@@ -236,7 +236,7 @@ function AudioMockup() {
         </span>
       </div>
 
-      {/* DM speaking — waveform */}
+      {/* DM speaking: waveform */}
       <div className="px-4 pt-4 pb-2">
         <div className="rounded-xl bg-gold/5 border border-gold/15 px-4 py-3 flex items-center gap-4">
           <div className="shrink-0 w-9 h-9 rounded-full bg-gold/15 flex items-center justify-center">
@@ -494,7 +494,7 @@ const features: {
       </svg>
     ),
     title: 'AI Dungeon Master',
-    desc: 'A narrative AI that understands the world, your NPCs, and your character\'s history. Type or speak — the DM responds with vivid storytelling and dramatic choices.',
+    desc: 'A narrative AI that understands the world, your NPCs, and your character\'s history. Type or speak; the DM responds with vivid storytelling and dramatic choices.',
     mockup: <ChatMockup />,
   },
   {
@@ -504,7 +504,7 @@ const features: {
       </svg>
     ),
     title: 'Real-Time Combat',
-    desc: 'Full D&D 5.5e combat with initiative tracking, conditions, and HP. The DM runs the enemies — you make the decisions.',
+    desc: 'Full D&D 5.5e combat with initiative tracking, conditions, and HP. The DM runs the enemies; you make the decisions.',
     mockup: <CombatMockup />,
     flip: true,
   },
@@ -526,7 +526,7 @@ const features: {
       </svg>
     ),
     title: 'Narrated by Your DM',
-    desc: 'Every word the DM writes is spoken aloud in a rich, cinematic voice — powered by text-to-speech. Pair it with adaptive ambient sound, mood music, and real-time SFX for a tabletop experience that feels like a film.',
+    desc: 'Every word the DM writes is spoken aloud in a rich, cinematic voice, powered by text-to-speech. Pair it with adaptive ambient sound, mood music, and real-time SFX for a tabletop experience that feels like a film.',
     mockup: <AudioMockup />,
   },
   {
@@ -536,7 +536,7 @@ const features: {
       </svg>
     ),
     title: 'D&D Beyond Integration',
-    desc: 'Paste your D&D Beyond shareable character link and your sheet appears instantly inside Grimoire — stats, skills, spells, and equipment, always up to date. And if you don\'t have physical dice, roll straight from your character sheet.',
+    desc: 'Paste your D&D Beyond shareable character link and your sheet appears instantly inside Grimoire: stats, skills, spells, and equipment, always up to date. And if you don\'t have physical dice, roll straight from your character sheet.',
     mockup: <DndBeyondMockup />,
     flip: true,
   },
@@ -667,7 +667,7 @@ export function LandingPage() {
           </h1>
 
           <p className="fade-up-3 mb-10 mx-auto max-w-xl text-lg font-body text-stone/90 leading-relaxed">
-            Grimoire is your AI-powered dungeon master — always ready, always immersive.
+            Grimoire is your AI-powered dungeon master, always ready, always immersive.
             Experience solo D&D as if you were sitting at a real table.
           </p>
 
@@ -793,7 +793,7 @@ export function LandingPage() {
               },
               {
                 icon: '🗺️', title: 'Campaign Memory',
-                desc: 'The AI remembers everything — every NPC, event, and secret in your campaign.',
+                desc: 'The AI remembers everything: every NPC, event, and secret in your campaign.',
                 color: 'border-gold/15 hover:border-gold/30',
                 glow: 'group-hover:bg-gold/3',
               },
@@ -805,7 +805,7 @@ export function LandingPage() {
               },
               {
                 icon: '🎲', title: 'Fate Oracle',
-                desc: 'The Myth & Magic Fate Chart resolves events — probability-based answers to anything.',
+                desc: 'The Myth & Magic Fate Chart resolves events, with probability-based answers to anything.',
                 color: 'border-blood/20 hover:border-blood/40',
                 glow: 'group-hover:bg-blood/5',
               },
@@ -841,7 +841,7 @@ export function LandingPage() {
           <blockquote className="font-body italic text-xl text-parchment/90 leading-relaxed mb-6">
             "Finally I can enjoy D&D when my friends aren't available. Grimoire understands my playstyle and tells stories that actually draw me in."
           </blockquote>
-          <p className="text-sm font-ui text-mist/50">— Solo Adventurer</p>
+          <p className="text-sm font-ui text-mist/50">- Solo Adventurer</p>
         </div>
       </section>
 
