@@ -187,12 +187,11 @@ characterRoutes.post('/sync-dndb', async (req: Request, res: Response): Promise<
       })
       .eq('id', campaign_id)
 
-    // Sync equipment to inventory — remove old D&D Beyond items, insert fresh
+    // Sync equipment to inventory — clear all existing items, D&D Beyond is source of truth
     await supabaseAdmin
       .from('inventory_items')
       .delete()
       .eq('campaign_id', campaign_id)
-      .eq('properties->>source', 'dndbeyond')
 
     if (character.equipment.length > 0) {
       const dndbFilterType: Record<string, string> = {

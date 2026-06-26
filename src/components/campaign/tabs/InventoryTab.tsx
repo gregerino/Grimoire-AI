@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, X, Minus, Search, Sparkles, ChevronDown, ChevronUp, Weight, Coins, GripVertical } from 'lucide-react'
+import { Plus, Trash2, X, Minus, Search, ChevronDown, ChevronUp, Weight, Coins, GripVertical } from 'lucide-react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, DragOverlay } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -43,7 +43,7 @@ const rarityLabels: Record<ItemRarity, string> = {
   legendary: 'Legendary',
 }
 
-const MAX_ATTUNEMENT = 3
+
 
 const defaultForm = {
   name: '',
@@ -135,7 +135,6 @@ export function InventoryTab({ campaignId }: Props) {
       .map((cat) => ({ category: cat, items: groups[cat] }))
   }, [filteredItems])
 
-  const attunedCount = items.filter((i) => i.is_equipped && (i.category === 'weapon' || i.category === 'armor')).length
   const totalWeight = calculateTotalWeight(items)
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -158,12 +157,6 @@ export function InventoryTab({ campaignId }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-medium text-gray-500">{items.length} items</h3>
-          {attunedCount > 0 && (
-            <span className="flex items-center gap-1 rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] font-medium text-purple-400">
-              <Sparkles className="h-2.5 w-2.5" />
-              {attunedCount}/{MAX_ATTUNEMENT}
-            </span>
-          )}
           <span className="flex items-center gap-1 text-[10px] text-gray-500">
             <Weight className="h-2.5 w-2.5" />
             {totalWeight.toFixed(1)} lbs
