@@ -267,6 +267,10 @@ export async function getCharacterSheet(campaignId: string) {
   return jsonFetch(`${API_BASE}/character/${campaignId}`)
 }
 
+export async function deleteCharacterSheet(campaignId: string) {
+  return jsonFetch(`${API_BASE}/character/${campaignId}`, { method: 'DELETE' })
+}
+
 export async function syncCharacterFromDndb(campaignId: string, url: string) {
   return jsonFetch(`${API_BASE}/character/sync-dndb`, {
     method: 'POST',

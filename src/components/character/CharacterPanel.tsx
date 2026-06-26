@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Heart, Shield, Footprints, Loader2,
   Sword, BookOpen, Star, Backpack, ChevronDown, ChevronUp,
-  Moon, AlertCircle, Crosshair, RefreshCw, Link, ExternalLink,
+  Moon, AlertCircle, Crosshair, RefreshCw, Link, ExternalLink, Trash2,
 } from 'lucide-react'
-import { getCharacterSheet, saveCharacterSheet, syncCharacterFromDndb } from '@/lib/api'
+import { getCharacterSheet, saveCharacterSheet, syncCharacterFromDndb, deleteCharacterSheet } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { ConditionBadge } from '@/components/combat/ConditionBadge'
 import { RestDialog } from '@/components/combat/RestDialog'
@@ -54,6 +54,8 @@ export function CharacterPanel({ campaignId }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [showRestDialog, setShowRestDialog] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchCharacter = useCallback(async () => {
     setLoading(true)
@@ -100,6 +102,18 @@ export function CharacterPanel({ campaignId }: Props) {
       setError(err instanceof Error ? err.message : 'Failed to sync from D&D Beyond')
     }
     setSyncing(false)
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteCharacterSheet(campaignId)
+      setCharacter(null)
+      setShowDeleteConfirm(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove character')
+    }
+    setDeleting(false)
   }
 
   const toggle = (section: string) => {
@@ -224,6 +238,13 @@ export function CharacterPanel({ campaignId }: Props) {
             aria-label={character?.dndbeyondId ? 'Synka från D&D Beyond' : 'Koppla D&D Beyond'}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="rounded p-1 text-gray-600 transition-colors hover:text-red-400 focus-ring"
+            aria-label="Ta bort karaktär"
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -471,6 +492,33 @@ export function CharacterPanel({ campaignId }: Props) {
           onClose={() => setShowRestDialog(false)}
           onComplete={fetchCharacter}
         />
+      )}
+
+      {/* Delete confirm */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-xs rounded-xl border border-navy bg-dark-navy p-5 shadow-xl">
+            <h4 className="mb-2 text-sm font-semibold text-parchment">Ta bort karaktär?</h4>
+            <p className="mb-5 text-xs text-gray-400">
+              Karaktärsbladet tas bort permanent och du kan koppla in en ny karaktär.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 rounded-lg border border-navy px-3 py-2 text-xs text-gray-400 transition-colors hover:border-gray-500 hover:text-gray-300"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 rounded-lg bg-red-500/20 border border-red-500/30 px-3 py-2 text-xs text-red-400 transition-colors hover:bg-red-500/30 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="mx-auto h-3.5 w-3.5 animate-spin" /> : 'Ta bort'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

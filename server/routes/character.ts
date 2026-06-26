@@ -248,6 +248,27 @@ characterRoutes.post('/sync-dndb', async (req: Request, res: Response): Promise<
   }
 })
 
+// DELETE /api/character/:campaignId — remove character sheet so a new one can be linked
+characterRoutes.delete('/:campaignId', async (req: Request, res: Response): Promise<void> => {
+  const { campaignId } = req.params
+  const { error } = await supabaseAdmin
+    .from('character_sheets')
+    .delete()
+    .eq('campaign_id', campaignId)
+
+  if (error) {
+    res.status(500).json({ error: error.message })
+    return
+  }
+
+  await supabaseAdmin
+    .from('campaigns')
+    .update({ character_name: null, character_class: null, character_level: null, current_hp: null, max_hp: null })
+    .eq('id', campaignId)
+
+  res.json({ success: true })
+})
+
 // GET /api/character/:campaignId — get saved character sheet
 characterRoutes.get('/:campaignId', async (req: Request, res: Response): Promise<void> => {
   const { campaignId } = req.params
