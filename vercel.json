@@ -1,9 +1,9 @@
 {
-  "buildCommand": "vite build",
+  "buildCommand": "vite build && node_modules/.bin/esbuild api/_handler.ts --bundle --platform=node --format=cjs --packages=external --outfile=api/index.cjs",
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "api/index.ts": {
+    "api/index.cjs": {
       "maxDuration": 60
     }
   },
