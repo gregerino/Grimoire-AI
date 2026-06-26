@@ -204,9 +204,9 @@ characterRoutes.get('/:campaignId', async (req: Request, res: Response): Promise
     .single()
 
   if (error || !data) {
-    res.json({ character: null })
+    res.set('Cache-Control', 'no-store').json({ character: null })
     return
   }
 
-  res.json({ character: data.data, updatedAt: data.updated_at })
+  res.set('Cache-Control', 'no-store').json({ character: data.data, updatedAt: data.updated_at })
 })
