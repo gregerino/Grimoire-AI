@@ -96,7 +96,7 @@ function TabButton({
   return (
     <button
       onClick={onToggle}
-      className={`relative flex shrink-0 items-center justify-center p-2.5 transition-colors focus-ring ${
+      className={`group relative flex shrink-0 items-center justify-center p-2.5 transition-colors focus-ring ${
         isActive
           ? 'border-b-2 border-gold text-gold'
           : showDot
@@ -111,6 +111,9 @@ function TabButton({
       {showDot && (
         <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" aria-label="Strid pågår" />
       )}
+      <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-midnight px-2 py-1 text-[10px] font-medium text-parchment opacity-0 shadow-lg ring-1 ring-navy/60 transition-opacity group-hover:opacity-100 z-50">
+        {tab.label}
+      </span>
     </button>
   )
 }

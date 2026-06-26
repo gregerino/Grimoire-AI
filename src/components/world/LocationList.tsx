@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   Search, X, Plus, MapPin, Users, ScrollText,
-  Pencil, StickyNote, Eye, Image, Loader2, Navigation,
+  Pencil, StickyNote, Eye, Image, Loader2, Navigation, Maximize2,
   Castle, Swords, TreePine, Landmark, Waves, Shield, Church, Home,
   Mountain, Building2,
 } from 'lucide-react'
@@ -414,6 +414,7 @@ function LocationDetail({
   const [editDesc, setEditDesc] = useState(location.description ?? '')
   const [editType, setEditType] = useState(location.type)
   const [noteInput, setNoteInput] = useState('')
+  const [lightbox, setLightbox] = useState(false)
 
   useEffect(() => {
     setEditName(location.name)
@@ -478,11 +479,43 @@ function LocationDetail({
 
       {/* Image */}
       {location.image_url ? (
-        <img
-          src={location.image_url}
-          alt={location.name}
-          className="w-full h-40 object-cover rounded-lg border border-navy"
-        />
+        <>
+          <div
+            className="group relative w-full h-40 cursor-zoom-in overflow-hidden rounded-lg border border-navy"
+            onClick={() => setLightbox(true)}
+          >
+            <img
+              src={location.image_url}
+              alt={location.name}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+              <Maximize2 className="h-6 w-6 text-white drop-shadow" />
+            </div>
+          </div>
+
+          {lightbox && (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              onClick={() => setLightbox(false)}
+            >
+              <button
+                className="absolute top-4 right-4 rounded-lg bg-black/60 p-2 text-gray-300 hover:text-white transition-colors"
+                onClick={() => setLightbox(false)}
+                aria-label="Stäng"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <img
+                src={location.image_url}
+                alt={location.name}
+                className="max-h-[90vh] max-w-[90vw] rounded-xl border border-navy object-contain shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-gray-400">{location.name}</p>
+            </div>
+          )}
+        </>
       ) : (
         <button
           onClick={onGenerateImage}

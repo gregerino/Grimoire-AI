@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import OpenAI from 'openai'
-import crypto from 'crypto'
+import { createHash } from 'crypto'
 import { supabaseAdmin } from '../lib/supabase-admin'
 import { withRetry } from '../lib/retry'
 
@@ -8,11 +8,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export const imageRoutes = Router()
 
-const SESSION_IMAGE_COUNTS = new Map<string, number>()
-const MAX_IMAGES_PER_SESSION = 10
-
 function hashPrompt(prompt: string): string {
-  return crypto.createHash('sha256').update(prompt).digest('hex').slice(0, 16)
+  return createHash('sha256').update(prompt).digest('hex').slice(0, 16)
 }
 
 function buildNpcPortraitPrompt(npc: {
@@ -72,11 +69,11 @@ async function generateAndStore(
 
   const response = await withRetry(
     () => openai.images.generate({
-      model: 'gpt-image-1',
+      model: 'gpt-image-2',
       prompt,
       n: 1,
       size,
-      quality: 'low',
+      quality: 'high',
     }),
     { maxRetries: 2, timeoutMs: 60_000 },
   )
@@ -112,17 +109,10 @@ async function generateAndStore(
   return publicUrl
 }
 
-function checkRateLimit(sessionId: string): boolean {
-  const count = SESSION_IMAGE_COUNTS.get(sessionId) ?? 0
-  if (count >= MAX_IMAGES_PER_SESSION) return false
-  SESSION_IMAGE_COUNTS.set(sessionId, count + 1)
-  return true
-}
-
 // POST /api/image/generate — generate an image
 imageRoutes.post('/generate', async (req: Request, res: Response) => {
   try {
-    const { campaign_id, session_id, type, data } = req.body
+    const { campaign_id, type, data } = req.body
 
     if (!campaign_id || !type) {
       res.status(400).json({ error: 'Missing campaign_id or type' })
@@ -142,11 +132,6 @@ imageRoutes.post('/generate', async (req: Request, res: Response) => {
 
     if (!campaign?.image_generation_enabled) {
       res.status(200).json({ url: null, reason: 'disabled' })
-      return
-    }
-
-    if (session_id && !checkRateLimit(session_id)) {
-      res.status(200).json({ url: null, reason: 'rate_limited' })
       return
     }
 
@@ -174,7 +159,6 @@ imageRoutes.post('/generate', async (req: Request, res: Response) => {
 imageRoutes.post('/npc/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params
-    const { session_id } = req.body
 
     const { data: npc, error } = await supabaseAdmin
       .from('npcs')
@@ -200,11 +184,6 @@ imageRoutes.post('/npc/:id', async (req: Request, res: Response) => {
 
     if (!campaign?.image_generation_enabled) {
       res.json({ url: null, reason: 'disabled' })
-      return
-    }
-
-    if (session_id && !checkRateLimit(session_id)) {
-      res.json({ url: null, reason: 'rate_limited' })
       return
     }
 
