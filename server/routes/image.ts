@@ -73,7 +73,7 @@ async function generateAndStore(
       prompt,
       n: 1,
       size,
-      quality: 'high',
+      quality: 'medium',
     }),
     { maxRetries: 2, timeoutMs: 240_000 },
   )
