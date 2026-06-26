@@ -75,7 +75,7 @@ async function generateAndStore(
       size,
       quality: 'high',
     }),
-    { maxRetries: 2, timeoutMs: 60_000 },
+    { maxRetries: 2, timeoutMs: 240_000 },
   )
 
   const b64 = response.data[0].b64_json
