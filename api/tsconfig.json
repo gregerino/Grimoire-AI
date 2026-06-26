@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "../dist-server",
+    "rootDir": "..",
+    "baseUrl": ".."
+  },
+  "include": ["./**/*", "../server/**/*", "../src/types/**/*", "../src/lib/fate-chart.ts"]
+}
