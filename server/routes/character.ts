@@ -207,18 +207,23 @@ characterRoutes.post('/sync-dndb', async (req: Request, res: Response): Promise<
       const inventoryItems = character.equipment.map((item) => {
         const e = item as { name: string; qty: number; weight: string; filterType?: string; equipped?: boolean }
         const category = dndbFilterType[e.filterType ?? ''] ?? 'other'
+        const weight = parseFloat(e.weight ?? '0') || 0
+        const qty = e.qty ?? 1
+        console.log(`[dndb-sync] ${e.name}: weight=${weight} qty=${qty} total=${weight * qty}`)
         return {
           campaign_id,
           name: e.name,
           category,
-          quantity: e.qty ?? 1,
-          weight: parseFloat(e.weight ?? '0') || 0,
+          quantity: qty,
+          weight,
           is_equipped: e.equipped ?? false,
           rarity: 'common' as const,
           properties: { source: 'dndbeyond' },
         }
       })
 
+      const totalW = inventoryItems.reduce((s, i) => s + i.weight * i.quantity, 0)
+      console.log(`[dndb-sync] total weight: ${totalW} lbs, items: ${inventoryItems.length}`)
       await supabaseAdmin.from('inventory_items').insert(inventoryItems)
     }
 
