@@ -136,7 +136,7 @@ chatRoutes.post('/', async (req: Request, res: Response) => {
         : (h >= 21 || h < 1) ? 'night' : 'midnight'
 
     const worldContext: WorldContext = {
-      worldTime: campaign ? { day: (campaign as Record<string, unknown>).world_day as number ?? 1, hour: (campaign as Record<string, unknown>).world_hour as number ?? 8, timeOfDay: resolveTimeOfDay(((campaign as Record<string, unknown>).world_hour as number) ?? 8) } : undefined,
+      worldTime: campaign ? { day: campaign.world_day ?? 1, hour: campaign.world_hour ?? 8, timeOfDay: resolveTimeOfDay(campaign.world_hour ?? 8) } : undefined,
       currentLocation: currentLoc ? { name: currentLoc.name, type: currentLoc.type, description: currentLoc.description } : null,
       factionReputations: factions.map((f: { id: string; name: string }) => {
         const rep = reputations.find((r: { faction_id: string }) => r.faction_id === f.id)
@@ -892,7 +892,7 @@ function generateNpcPortraitAsync(npc: {
           { maxRetries: 2, timeoutMs: 60_000 },
         )
 
-        const b64 = response.data[0].b64_json
+        const b64 = response.data?.[0].b64_json
         if (!b64) return
 
         const buffer = Buffer.from(b64, 'base64')
@@ -959,7 +959,7 @@ function generateLocationImageAsync(location: {
           { maxRetries: 2, timeoutMs: 60_000 },
         )
 
-        const b64 = response.data[0].b64_json
+        const b64 = response.data?.[0].b64_json
         if (!b64) return
 
         const buffer = Buffer.from(b64, 'base64')

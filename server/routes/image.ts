@@ -78,7 +78,7 @@ async function generateAndStore(
     { maxRetries: 2, timeoutMs: 240_000 },
   )
 
-  const b64 = response.data[0].b64_json
+  const b64 = response.data?.[0].b64_json
   if (!b64) throw new Error('No image data returned')
   const buffer = Buffer.from(b64, 'base64')
   const storagePath = `${campaignId}/${imageType}/${promptHash}.png`

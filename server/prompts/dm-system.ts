@@ -361,8 +361,8 @@ export function buildSystemPrompt(
       ? `\nActive Quests & Rumors:\n${worldContext.activeQuests.map(q => `  - [${q.status}] ${q.title}${q.description ? ': ' + q.description : ''}`).join('\n')}`
       : ''
 
-    const dmNotesBlock = (campaign as Record<string, unknown>).dm_notes
-      ? `\n\n[DM NOTES — follow these instructions for this campaign]\n${(campaign as Record<string, unknown>).dm_notes}\n[END DM NOTES]`
+    const dmNotesBlock = campaign.dm_notes
+      ? `\n\n[DM NOTES — follow these instructions for this campaign]\n${campaign.dm_notes}\n[END DM NOTES]`
       : ''
 
     parts.push(`

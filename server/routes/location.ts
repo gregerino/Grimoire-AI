@@ -118,7 +118,8 @@ locationRoutes.delete('/:id', async (req: Request, res: Response) => {
 
 // POST /api/location/:id/connect/:otherId
 locationRoutes.post('/:id/connect/:otherId', async (req: Request, res: Response) => {
-  const { id, otherId } = req.params
+  const id = req.params.id as string
+  const otherId = req.params.otherId as string
 
   const [locA, locB] = await Promise.all([
     supabaseAdmin.from('world_locations').select('id, connected_locations').eq('id', id).single(),

@@ -5,11 +5,11 @@ import { rollFateChart, rollRandomEvent, type OddsLevel } from '../../src/lib/fa
 export const travelRoutes = Router()
 
 const DANGER_TO_ODDS: Record<number, OddsLevel> = {
-  1: 'Impossible',
-  2: 'Very Unlikely',
-  3: 'Unlikely',
+  1: 'impossible',
+  2: 'very_unlikely',
+  3: 'unlikely',
   4: '50/50',
-  5: 'Likely',
+  5: 'likely',
 }
 
 const TERRAIN_SPEED: Record<string, number> = {
@@ -59,7 +59,7 @@ travelRoutes.post('/start', async (req: Request, res: Response) => {
   const odds = DANGER_TO_ODDS[dangerLevel] || 'Unlikely'
   const fateResult = rollFateChart(odds, chaosFactor)
 
-  const encounterTriggered = fateResult.answer === 'Exceptional Yes' || fateResult.answer === 'Yes'
+  const encounterTriggered = fateResult.result === 'exceptional_yes' || fateResult.result === 'yes'
 
   let encounter = null
   if (encounterTriggered) {
