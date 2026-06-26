@@ -191,24 +191,6 @@ export function AudioMixer() {
           <Channel key={ch.label} {...ch} disabled={store.quietMode} />
         ))}
 
-        {/* TTS volume */}
-        {speechEnabled && (
-          <Channel
-            label="DM Voice"
-            sub="Text-to-speech narration"
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-gold">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-              </svg>
-            }
-            value={ttsVolume}
-            muted={store.quietMode}
-            onChange={setTtsVolume}
-            onToggleMute={store.toggleQuietMode}
-            accentClass="bg-gold"
-            disabled={store.quietMode}
-          />
-        )}
       </div>
 
       {/* DM Voice section */}
