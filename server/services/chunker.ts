@@ -1,5 +1,4 @@
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
-import { PDFParse } from 'pdf-parse'
 
 export interface Chunk {
   content: string
@@ -15,11 +14,12 @@ export async function parsePdfToChunks(
   buffer: Buffer,
   filename: string
 ): Promise<Chunk[]> {
-  const parser = new PDFParse({ data: buffer })
-  await parser.load()
-  const { text, numpages } = await parser.getText()
+  // Dynamic import so pdf-parse doesn't crash the server at startup
+  // (it requires DOMMatrix which isn't available in serverless environments)
+  const pdfParse = (await import('pdf-parse')).default
+  const result = await pdfParse(buffer)
 
-  if (!text.trim()) {
+  if (!result.text.trim()) {
     throw new Error('PDF contains no extractable text')
   }
 
@@ -29,13 +29,13 @@ export async function parsePdfToChunks(
     separators: ['\n\n', '\n', '. ', ' ', ''],
   })
 
-  const docs = await splitter.createDocuments([text])
+  const docs = await splitter.createDocuments([result.text])
 
   return docs.map((doc, i) => ({
     content: doc.pageContent,
     metadata: {
       page_start: 1,
-      page_end: numpages,
+      page_end: result.numpages,
       chunk_index: i,
       filename,
     },
