@@ -223,6 +223,17 @@ characterRoutes.post('/sync-dndb', async (req: Request, res: Response): Promise<
       await supabaseAdmin.from('inventory_items').insert(inventoryItems)
     }
 
+    // Sync currency from D&D Beyond (pp→gp, ep→sp)
+    const cur = character.currencies
+    if (cur) {
+      const gp = (cur.gp ?? 0) + (cur.pp ?? 0) * 10
+      const sp = (cur.sp ?? 0) + (cur.ep ?? 0) * 5
+      const cp = cur.cp ?? 0
+      await supabaseAdmin
+        .from('campaign_currency')
+        .upsert({ campaign_id, gp, sp, cp, updated_at: new Date().toISOString() }, { onConflict: 'campaign_id' })
+    }
+
     res.json({ character: { ...character, dndbeyondId: characterId }, synced: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to sync from D&D Beyond'
