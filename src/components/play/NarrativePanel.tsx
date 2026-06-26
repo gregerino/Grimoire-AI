@@ -17,9 +17,34 @@ interface Props {
 
 export function NarrativePanel({ messages, streaming, speechEnabled, onSpeak }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const userScrolledRef = useRef(false)
 
+  // Track manual scroll — stop auto-scrolling if user has scrolled up
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      userScrolledRef.current = distanceFromBottom > 80
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Auto-scroll to bottom only when a new message is added (not during streaming)
+  // and only if user hasn't scrolled away
+  const prevMessageCountRef = useRef(0)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const newMessageAdded = messages.length > prevMessageCountRef.current
+    prevMessageCountRef.current = messages.length
+    if (newMessageAdded) {
+      userScrolledRef.current = false
+    }
+    if (!userScrolledRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    }
   }, [messages])
 
   if (messages.length === 0) {

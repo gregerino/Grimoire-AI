@@ -186,7 +186,8 @@ export function PlayPage() {
     (chunk: string) => {
       if (!speechEnabled || !autoRead) return
       ttsBufferRef.current += chunk
-      const parts = ttsBufferRef.current.split(/\n\n+/)
+      // Split on sentence endings or paragraph breaks so TTS starts sooner
+      const parts = ttsBufferRef.current.split(/(?<=[.!?])\s+(?=[A-ZÅÄÖ"'])|(?<=\n\n)/)
       if (parts.length > 1) {
         for (let i = 0; i < parts.length - 1; i++) {
           const cleaned = cleanForSpeech(parts[i])
