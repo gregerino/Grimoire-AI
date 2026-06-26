@@ -2,7 +2,7 @@ import { type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Gauge, Shield, User, Swords, ScrollText, Package,
-  FileText, History, Volume2, Music, MapPin, Flag,
+  FileText, History, Music, MapPin, Flag,
   Brain, StickyNote, X,
 } from 'lucide-react'
 import { useCombatStore } from '@/stores/combatStore'
@@ -10,7 +10,7 @@ import { useCombatStore } from '@/stores/combatStore'
 export type SidebarPanel =
   | 'gamestate' | 'history' | 'npcs' | 'quests'
   | 'inventory' | 'library' | 'character' | 'combat'
-  | 'speech' | 'audio' | 'locations' | 'reputation'
+  | 'audio' | 'locations' | 'reputation'
   | 'memory' | 'notes'
   | null
 
@@ -27,8 +27,7 @@ const panelTabs = [
   { id: 'memory' as const, icon: Brain, label: 'Memory' },
   { id: 'library' as const, icon: FileText, label: 'PDFs' },
   { id: 'history' as const, icon: History, label: 'Sessions' },
-  { id: 'speech' as const, icon: Volume2, label: 'Röst' },
-  { id: 'audio' as const, icon: Music, label: 'Ljud' },
+  { id: 'audio' as const, icon: Music, label: 'Audio' },
 ]
 
 interface Props {

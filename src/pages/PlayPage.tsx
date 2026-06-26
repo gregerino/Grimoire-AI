@@ -29,7 +29,6 @@ import { CharacterPanel } from '@/components/character/CharacterPanel'
 import { CombatTracker } from '@/components/combat/CombatTracker'
 import { SessionHistory } from '@/components/session/SessionHistory'
 import { SessionReader } from '@/components/session/SessionReader'
-import { SpeechSettingsPanel } from '@/components/settings/SpeechSettingsPanel'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useSpeechStore } from '@/stores/speechStore'
 import { AudioMixer } from '@/components/audio/AudioMixer'
@@ -626,7 +625,6 @@ export function PlayPage() {
           {sidebarPanel === 'character' && <CharacterPanel campaignId={id} />}
           {sidebarPanel === 'combat' && <CombatTracker />}
           {sidebarPanel === 'library' && <PdfLibrary campaignId={id} userId={user.id} />}
-          {sidebarPanel === 'speech' && <SpeechSettingsPanel />}
           {sidebarPanel === 'audio' && <AudioMixer />}
           {sidebarPanel === 'locations' && <LocationList campaignId={id} sessionId={currentSession?.id ?? null} />}
           {sidebarPanel === 'reputation' && <ReputationPanel campaignId={id} />}
