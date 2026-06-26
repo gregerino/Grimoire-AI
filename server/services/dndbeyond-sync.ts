@@ -66,6 +66,7 @@ interface DndbCharacterData {
   bonusStats: DndbAbility[]
   overrideStats: DndbAbility[]
   baseHitPoints: number
+  overrideHitPoints: number | null
   temporaryHitPoints: number
   removedHitPoints: number
   bonusHitPoints: number | null
@@ -248,8 +249,8 @@ function mapToCharacterSheet(data: DndbCharacterData): CharacterSheet {
     CHA: getAbilityScore(data, 6),
   }
 
-  const conMod = abilityMod(stats.CON)
-  const maxHp = data.baseHitPoints + (conMod * level) + (data.bonusHitPoints ?? 0)
+  // baseHitPoints from D&D Beyond already includes CON modifier per level — do not add it again
+  const maxHp = (data.overrideHitPoints ?? data.baseHitPoints) + (data.bonusHitPoints ?? 0)
 
   const allModifiers = [
     ...(data.modifiers?.race ?? []),
