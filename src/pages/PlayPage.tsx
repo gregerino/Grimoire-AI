@@ -174,6 +174,15 @@ export function PlayPage() {
       .replace(/\[.*?\]/g, '')
       .replace(/^>?\s*Roll:\s*\d+.*$/gim, '')
       .replace(/^>?\s*\d+\s*[—–-]\s*(Exceptional\s+)?(Yes|No|Extreme\s+Yes|Extreme\s+No)\.?.*$/gim, '')
+      // Strip attack/damage/save roll lines: "Attack roll: d20+3 = 7 vs AC 13"
+      .replace(/^.*(?:attack roll|damage roll|saving throw|initiative roll|spell attack).*$/gim, '')
+      // Strip lines with inline dice results: "d20+3 = 7" or "1d6 = 4"
+      .replace(/^.*\d*d\d+[^=\n]*=\s*\d+.*$/gim, '')
+      // Strip instructional lines directed at the player
+      .replace(/^(?:now |please |go ahead and )?roll\b.*$/gim, '')
+      .replace(/^as a (?:level \d+ )?[a-z]+ you\b.*$/gim, '')
+      .replace(/^(?:you get |you have |you can |you may |you need to |you roll |add your |don't forget ).*\d+d\d+.*$/gim, '')
+      .replace(/\n{3,}/g, '\n\n')
       .trim()
 
   const flushTtsBuffer = useCallback(() => {
@@ -315,7 +324,7 @@ export function PlayPage() {
         const combat = useCombatStore.getState()
 
         if (gameState.combatStart) {
-          setShowCombatOverlay(true)
+          if (!combat.inCombat) setShowCombatOverlay(true)
           let charData: Record<string, unknown> | null = null
           try {
             const result = await getCharacterSheet(id)
@@ -361,7 +370,10 @@ export function PlayPage() {
           for (const c of gameState.conditionsLifted) combat.removeCondition(c.target, c.condition as Condition)
         }
 
-        if (gameState.deathSaveResult) combat.rollDeathSave(gameState.deathSaveResult.roll)
+        if (gameState.deathSaveResult) {
+          const player = combat.initiativeOrder.find((c) => c.isPlayer)
+          if (player && player.hp.current === 0) combat.rollDeathSave(gameState.deathSaveResult.roll)
+        }
 
         if (gameState.audio) {
           if (gameState.audio.ambient !== undefined) {
