@@ -536,7 +536,7 @@ const features: {
       </svg>
     ),
     title: 'D&D Beyond Integration',
-    desc: 'Link your D&D Beyond account and your character syncs instantly — stats, skills, spells, and equipment. No manual setup. No data entry. And if you don\'t have physical dice, roll straight from your character sheet.',
+    desc: 'Paste your D&D Beyond shareable character link and your sheet appears instantly inside Grimoire — stats, skills, spells, and equipment, always up to date. And if you don\'t have physical dice, roll straight from your character sheet.',
     mockup: <DndBeyondMockup />,
     flip: true,
   },
@@ -546,7 +546,7 @@ const pills = [
   'AI Dungeon Master', 'Solo D&D 5.5e', 'Voice Control', 'Combat Tracker',
   'Inventory & Loot', 'Time & Calendar', 'Factions & Reputation', 'Campaign Memory',
   'Text-to-Speech DM', 'Ambient Sound', 'Combat Music', 'Sound Effects',
-  'D&D Beyond Sync', 'Digital Dice Roller', 'Live Character Sheet',
+  'D&D Beyond Link', 'Digital Dice Roller', 'Live Character Sheet',
 ]
 
 export function LandingPage() {
