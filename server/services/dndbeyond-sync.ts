@@ -135,9 +135,13 @@ export async function fetchDndbCharacter(characterId: string): Promise<Character
   }
 
   const json = await res.json()
-  const data: DndbCharacterData = json.data ?? json
 
-  return mapToCharacterSheet(data)
+  if (json.success === false || !json.data) {
+    const msg = json.message || json.error || 'D&D Beyond returned an unexpected response'
+    throw new Error(msg)
+  }
+
+  return mapToCharacterSheet(json.data)
 }
 
 function getAbilityScore(data: DndbCharacterData, abilityId: number): number {
