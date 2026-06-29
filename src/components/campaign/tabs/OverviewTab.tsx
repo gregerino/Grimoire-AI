@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Shield, Swords, MapPin, ScrollText, RefreshCw, Loader2, Link, Unlink, ExternalLink } from 'lucide-react'
 import { getCharacterSheet, syncCharacterFromDndb, deleteCharacterSheet } from '@/lib/api'
+import { openDndbSheet } from '@/lib/dndb-window'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { Campaign } from '@/types/database'
 
@@ -116,15 +117,13 @@ export function OverviewTab({ campaign }: Props) {
                   {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                   {syncing ? 'Synkar...' : 'Synka igen'}
                 </button>
-                <a
-                  href={`https://www.dndbeyond.com/characters/${dndbId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => openDndbSheet(dndbId!)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-navy px-3 py-2 text-xs text-gray-400 transition-colors hover:border-gray-500 hover:text-gray-300"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   Öppna på D&D Beyond
-                </a>
+                </button>
                 <button
                   onClick={() => setShowUnlinkConfirm(true)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-navy px-3 py-2 text-xs text-gray-400 transition-colors hover:border-red-500/30 hover:text-red-400"

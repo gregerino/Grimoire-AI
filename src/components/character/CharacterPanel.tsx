@@ -5,6 +5,7 @@ import {
   Moon, AlertCircle, Crosshair, RefreshCw, Link, ExternalLink, Trash2,
 } from 'lucide-react'
 import { getCharacterSheet, saveCharacterSheet, syncCharacterFromDndb, deleteCharacterSheet } from '@/lib/api'
+import { openDndbSheet } from '@/lib/dndb-window'
 import { supabase } from '@/lib/supabase'
 import { ConditionBadge } from '@/components/combat/ConditionBadge'
 import { RestDialog } from '@/components/combat/RestDialog'
@@ -199,26 +200,7 @@ export function CharacterPanel({ campaignId }: Props) {
           </button>
           {character?.dndbeyondId && (
             <button
-              onClick={() => {
-                const saved = loadWindowState()
-                const w = saved?.w ?? 800
-                const h = saved?.h ?? 700
-                const x = saved?.x ?? Math.floor((window.screenX + window.innerWidth / 2) - w / 2)
-                const y = saved?.y ?? Math.floor((window.screenY + window.innerHeight / 2) - h / 2)
-                const popup = window.open(
-                  `https://www.dndbeyond.com/characters/${character.dndbeyondId}`,
-                  'dndbeyond-sheet',
-                  `width=${w},height=${h},left=${x},top=${y},resizable=yes,scrollbars=yes`,
-                )
-                if (popup) {
-                  const interval = setInterval(() => {
-                    if (popup.closed) { clearInterval(interval); return }
-                    try {
-                      saveWindowState(popup.screenX, popup.screenY, popup.outerWidth, popup.outerHeight)
-                    } catch { /* cross-origin */ }
-                  }, 2000)
-                }
-              }}
+              onClick={() => openDndbSheet(character.dndbeyondId!)}
               className="rounded p-1 text-gray-600 transition-colors hover:text-gold focus-ring"
               aria-label="Öppna D&D Beyond karaktärsblad"
             >
@@ -566,18 +548,3 @@ function CurrencyBadge({ label, value, color }: { label: string; value: number; 
   )
 }
 
-const DNDB_WINDOW_KEY = 'grimoire-dndb-window'
-
-function loadWindowState(): { w: number; h: number; x: number; y: number } | null {
-  try {
-    const raw = localStorage.getItem(DNDB_WINDOW_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    if (parsed.w >= 400 && parsed.h >= 300) return parsed
-  } catch { /* ignore */ }
-  return null
-}
-
-function saveWindowState(x: number, y: number, w: number, h: number) {
-  localStorage.setItem(DNDB_WINDOW_KEY, JSON.stringify({ x, y, w, h }))
-}
