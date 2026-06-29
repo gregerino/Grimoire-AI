@@ -313,6 +313,7 @@ interface GameState {
   deathSaveResult?: { roll: number }
   restType?: 'short' | 'long'
   hitDiceUsed?: number
+  levelUp?: boolean
   speech?: Array<{ speaker: string; text: string }>
   audio?: {
     ambient?: string
@@ -392,6 +393,17 @@ async function processGameState(
     if (campaign) {
       const newChaos = Math.max(1, Math.min(9, campaign.chaos_factor + gs.chaosFactor))
       updates.chaos_factor = newChaos
+    }
+  }
+
+  if (gs.levelUp) {
+    const { data: campaign } = await supabaseAdmin
+      .from('campaigns')
+      .select('character_level')
+      .eq('id', campaignId)
+      .single()
+    if (campaign) {
+      updates.character_level = (campaign.character_level || 1) + 1
     }
   }
 

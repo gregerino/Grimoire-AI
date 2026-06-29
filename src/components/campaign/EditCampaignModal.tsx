@@ -116,14 +116,14 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: Props)
 
         <div>
           <Textarea
-            label="DM Notes"
+            label="DM Instructions"
             rows={4}
-            placeholder="Instructions for the DM AI — tone, themes, house rules, special constraints, backstory hooks..."
+            placeholder="e.g. Keep combat deadly and tactical. Favor dark horror tone. Use Swedish names for NPCs. Skip lengthy travel descriptions. Allow creative solutions outside RAW..."
             value={form.dm_notes}
             onChange={(e) => setForm({ ...form, dm_notes: e.target.value })}
           />
           <p className="mt-1 text-[10px] text-mist">
-            These notes guide the AI dungeon master throughout the campaign.
+            Custom instructions the AI dungeon master will follow: tone, house rules, pacing, themes, or anything you want to shape the experience.
           </p>
         </div>
 

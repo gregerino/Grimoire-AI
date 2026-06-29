@@ -214,6 +214,7 @@ export interface GameState {
   deathSaveResult?: { roll: number }
   restType?: 'short' | 'long'
   hitDiceUsed?: number
+  levelUp?: boolean
   speech?: Array<{ speaker: string; text: string }>
   audio?: {
     ambient?: string

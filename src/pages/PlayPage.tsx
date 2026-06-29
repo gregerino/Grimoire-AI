@@ -131,20 +131,20 @@ export function PlayPage() {
     return () => { autoSaveRef.current() }
   }, [])
 
-  useEffect(() => {
+  const fetchCampaign = useCallback(async () => {
     if (!id) return
-    supabase
+    const { data } = await supabase
       .from('campaigns')
       .select('*')
       .eq('id', id)
       .single()
-      .then(({ data }) => {
-        if (data) {
-          setCampaign(data as Campaign)
-          setAiProvider((data as Campaign).ai_provider || 'claude')
-        }
-      })
+    if (data) {
+      setCampaign(data as Campaign)
+      setAiProvider((data as Campaign).ai_provider || 'claude')
+    }
   }, [id])
+
+  useEffect(() => { fetchCampaign() }, [fetchCampaign])
 
   const fetchSessions = useCallback(async () => {
     if (!id) return
@@ -387,6 +387,11 @@ export function PlayPage() {
               playSfx(sfx as SfxType)
             }
           }
+        }
+
+        if (gameState.levelUp) {
+          playSfx('level_up' as SfxType)
+          fetchCampaign()
         }
 
         if (gameState.lootFound?.length || gameState.currencyFound) {
