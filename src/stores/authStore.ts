@@ -9,6 +9,9 @@ interface AuthState {
   loading: boolean
   initialize: () => Promise<void>
   signInWithGoogle: () => Promise<void>
+  signUp: (email: string, password: string) => Promise<{ error: string | null; needsVerification: boolean }>
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
@@ -37,6 +40,27 @@ export const useAuthStore = create<AuthState>((set) => ({
         redirectTo: window.location.origin,
       },
     })
+  },
+
+  signUp: async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) return { error: error.message, needsVerification: false }
+    const needsVerification = !!data.user && !data.session
+    return { error: null, needsVerification }
+  },
+
+  signInWithEmail: async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return { error: error.message }
+    return { error: null }
+  },
+
+  resetPassword: async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    if (error) return { error: error.message }
+    return { error: null }
   },
 
   signOut: async () => {

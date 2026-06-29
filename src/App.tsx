@@ -11,6 +11,7 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ de
 const CampaignPage = lazy(() => import('@/pages/CampaignPage').then(m => ({ default: m.CampaignPage })))
 const PlayPage = lazy(() => import('@/pages/PlayPage').then(m => ({ default: m.PlayPage })))
 const RulebooksPage = lazy(() => import('@/pages/RulebooksPage').then(m => ({ default: m.RulebooksPage })))
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })))
 
 function PageLoader() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route
               element={
                 <ProtectedRoute>
