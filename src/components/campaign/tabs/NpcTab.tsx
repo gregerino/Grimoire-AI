@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, X, Skull, Heart, MapPin, MessageCircle } from 'lucide-react'
+import { Plus, Search, X, Skull, Heart, MapPin, MessageCircle, Trash2 } from 'lucide-react'
 import Fuse from 'fuse.js'
 import { supabase } from '@/lib/supabase'
 import { useRealtimeTable } from '@/hooks/useRealtimeTable'
@@ -51,6 +51,12 @@ export function NpcTab({ campaignId }: Props) {
   const toggleAlive = async (e: React.MouseEvent, npc: Npc) => {
     e.stopPropagation()
     await supabase.from('npcs').update({ is_alive: !npc.is_alive }).eq('id', npc.id)
+  }
+
+  const deleteNpc = async (e: React.MouseEvent, npc: Npc) => {
+    e.stopPropagation()
+    if (!confirm(`Delete ${npc.name}? This cannot be undone.`)) return
+    await supabase.from('npcs').delete().eq('id', npc.id)
   }
 
   const inputClass = 'w-full rounded-lg border border-navy bg-midnight px-3 py-2 text-sm text-parchment placeholder-gray-600 outline-none focus:border-gold/40 transition-colors'
@@ -150,6 +156,7 @@ export function NpcTab({ campaignId }: Props) {
               npc={npc}
               onClick={() => setSelectedNpc(npc)}
               onToggleAlive={toggleAlive}
+              onDelete={deleteNpc}
             />
           ))}
         </div>
@@ -170,7 +177,7 @@ export function NpcTab({ campaignId }: Props) {
   )
 }
 
-function NpcCard({ npc, onClick, onToggleAlive }: { npc: Npc; onClick: () => void; onToggleAlive: (e: React.MouseEvent, npc: Npc) => void }) {
+function NpcCard({ npc, onClick, onToggleAlive, onDelete }: { npc: Npc; onClick: () => void; onToggleAlive: (e: React.MouseEvent, npc: Npc) => void; onDelete: (e: React.MouseEvent, npc: Npc) => void }) {
   const config = dispositionConfig[npc.disposition]
 
   return (
@@ -228,13 +235,22 @@ function NpcCard({ npc, onClick, onToggleAlive }: { npc: Npc; onClick: () => voi
             <Badge variant="mystic" size="sm">{npc.relationship}</Badge>
           )}
         </div>
-        <button
-          onClick={(e) => onToggleAlive(e, npc)}
-          className="rounded p-1.5 text-gray-600 opacity-0 group-hover:opacity-100 hover:bg-navy transition-all"
-          title={npc.is_alive ? 'Mark as dead' : 'Revive'}
-        >
-          {npc.is_alive ? <Skull className="h-3.5 w-3.5" /> : <Heart className="h-3.5 w-3.5" />}
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={(e) => onToggleAlive(e, npc)}
+            className="rounded p-1.5 text-gray-600 opacity-0 group-hover:opacity-100 hover:bg-navy transition-all"
+            title={npc.is_alive ? 'Mark as dead' : 'Revive'}
+          >
+            {npc.is_alive ? <Skull className="h-3.5 w-3.5" /> : <Heart className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            onClick={(e) => onDelete(e, npc)}
+            className="rounded p-1.5 text-red-500/60 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 transition-all"
+            title="Delete NPC"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   )
