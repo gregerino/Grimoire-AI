@@ -430,16 +430,25 @@ async function processGameState(
   }
 
   if (gs.npcMet) {
-    const { data: newNpc } = await supabaseAdmin.from('npcs').insert({
-      campaign_id: campaignId,
-      name: gs.npcMet.name,
-      race: gs.npcMet.race || null,
-      description: gs.npcMet.description || null,
-      disposition: gs.npcMet.disposition || 'neutral',
-    }).select('id, campaign_id, name, race, occupation, description').single()
+    const { data: existing } = await supabaseAdmin
+      .from('npcs')
+      .select('id')
+      .eq('campaign_id', campaignId)
+      .ilike('name', gs.npcMet.name)
+      .maybeSingle()
 
-    if (newNpc) {
-      generateNpcPortraitAsync(newNpc)
+    if (!existing) {
+      const { data: newNpc } = await supabaseAdmin.from('npcs').insert({
+        campaign_id: campaignId,
+        name: gs.npcMet.name,
+        race: gs.npcMet.race || null,
+        description: gs.npcMet.description || null,
+        disposition: gs.npcMet.disposition || 'neutral',
+      }).select('id, campaign_id, name, race, occupation, description').single()
+
+      if (newNpc) {
+        generateNpcPortraitAsync(newNpc)
+      }
     }
   }
 

@@ -289,7 +289,7 @@ export function PlayPage() {
           fullResponse
             .replace(/```gamestate[\s\S]*?```/g, '')
             .replace(/```speech[\s\S]*?```/g, '')
-            .replace(/```(?:gamestate|speech)[\s\S]*$/g, '')
+            .replace(/```(?![\s\S]*```)[\s\S]*$/g, '')
         ).trim()
         if (!mute && display.length > prevDisplayLen) {
           handleStreamChunkForTts(display.slice(prevDisplayLen))

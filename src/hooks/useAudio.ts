@@ -36,7 +36,7 @@ const SFX_PATHS: Record<SfxType, string> = {
 }
 
 function createLoop(src: string): Howl {
-  return new Howl({ src: [src], loop: true, volume: 0, preload: true })
+  return new Howl({ src: [src], loop: true, volume: 0, html5: true, preload: true })
 }
 
 export function useAudio() {
