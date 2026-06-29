@@ -288,10 +288,11 @@ characterRoutes.get('/debug-dndb/:characterId', async (req: Request, res: Respon
       bonusStats: d.bonusStats,
       overrideStats: d.overrideStats,
       classes: d.classes?.map((c: { definition: { name: string }; level: number }) => ({ name: c.definition?.name, level: c.level })),
-      modifiers_race: d.modifiers?.race?.filter((m: { subType: string }) => m.subType?.includes('score')),
-      modifiers_class: d.modifiers?.class?.filter((m: { subType: string }) => m.subType?.includes('score')),
-      modifiers_feat: d.modifiers?.feat?.filter((m: { subType: string }) => m.subType?.includes('score')),
-      modifiers_background: d.modifiers?.background?.filter((m: { subType: string }) => m.subType?.includes('score')),
+      modifiers_race: d.modifiers?.race?.map((m: { type: string; subType: string; value: number }) => ({ type: m.type, subType: m.subType, value: m.value })),
+      modifiers_class: d.modifiers?.class?.map((m: { type: string; subType: string; value: number }) => ({ type: m.type, subType: m.subType, value: m.value })),
+      modifiers_feat: d.modifiers?.feat?.map((m: { type: string; subType: string; value: number }) => ({ type: m.type, subType: m.subType, value: m.value })),
+      modifiers_background: d.modifiers?.background?.map((m: { type: string; subType: string; value: number }) => ({ type: m.type, subType: m.subType, value: m.value })),
+      modifiers_item: d.modifiers?.item?.map((m: { type: string; subType: string; value: number }) => ({ type: m.type, subType: m.subType, value: m.value })),
     })
   } catch (err) {
     res.status(500).json({ error: String(err) })
