@@ -257,12 +257,6 @@ function mapToCharacterSheet(data: DndbCharacterData): CharacterSheet {
 
   const conMod = abilityMod(stats.CON)
 
-  const hpPerLevelBonus = allModifiers
-    .filter(m => m.type === 'bonus' && m.subType === 'hit-points-per-level' && m.value)
-    .reduce((sum, m) => sum + (m.value ?? 0), 0)
-
-  const maxHp = (data.overrideHitPoints ?? data.baseHitPoints) + (conMod * level) + (data.bonusHitPoints ?? 0) + (hpPerLevelBonus * level)
-
   const allModifiers = [
     ...(data.modifiers?.race ?? []),
     ...(data.modifiers?.class ?? []),
@@ -270,6 +264,12 @@ function mapToCharacterSheet(data: DndbCharacterData): CharacterSheet {
     ...(data.modifiers?.item ?? []),
     ...(data.modifiers?.background ?? []),
   ]
+
+  const hpPerLevelBonus = allModifiers
+    .filter(m => m.type === 'bonus' && m.subType === 'hit-points-per-level' && m.value)
+    .reduce((sum, m) => sum + (m.value ?? 0), 0)
+
+  const maxHp = (data.overrideHitPoints ?? data.baseHitPoints) + (conMod * level) + (data.bonusHitPoints ?? 0) + (hpPerLevelBonus * level)
 
   const proficientSaves = new Set<string>()
   const proficientSkills = new Set<string>()
