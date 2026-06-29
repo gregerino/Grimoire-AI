@@ -36,6 +36,18 @@ function createWindow() {
     },
   })
 
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.includes('dndbeyond.com')) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          alwaysOnTop: true,
+        },
+      }
+    }
+    return { action: 'allow' }
+  })
+
   if (isDev) {
     win.loadURL('http://localhost:5173')
     win.webContents.openDevTools()
