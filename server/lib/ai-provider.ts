@@ -36,10 +36,12 @@ export async function createCompletion(opts: {
     ...opts.messages,
   ]
 
+  const isReasoning = (opts.model || 'gpt-5.5').startsWith('gpt-5')
   const result = await openai.chat.completions.create({
     model: opts.model || 'gpt-5.5',
-    max_tokens: opts.maxTokens,
-    temperature: opts.temperature,
+    ...(isReasoning
+      ? { max_completion_tokens: opts.maxTokens }
+      : { max_tokens: opts.maxTokens, temperature: opts.temperature }),
     messages: openaiMessages,
   })
 

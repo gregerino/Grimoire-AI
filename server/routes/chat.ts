@@ -46,8 +46,7 @@ function streamOpenAI({ systemPrompt, messages, onText, onEnd, onError }: Stream
         model: 'gpt-5.5',
         messages: openaiMessages,
         stream: true,
-        max_tokens: MAX_RESPONSE_TOKENS,
-        temperature: 0.9,
+        max_completion_tokens: MAX_RESPONSE_TOKENS,
       })
 
       for await (const chunk of stream) {
