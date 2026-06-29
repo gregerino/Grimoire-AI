@@ -256,7 +256,12 @@ function mapToCharacterSheet(data: DndbCharacterData): CharacterSheet {
   }
 
   const conMod = abilityMod(stats.CON)
-  const maxHp = (data.overrideHitPoints ?? data.baseHitPoints) + (conMod * level) + (data.bonusHitPoints ?? 0)
+
+  const hpPerLevelBonus = allModifiers
+    .filter(m => m.type === 'bonus' && m.subType === 'hit-points-per-level' && m.value)
+    .reduce((sum, m) => sum + (m.value ?? 0), 0)
+
+  const maxHp = (data.overrideHitPoints ?? data.baseHitPoints) + (conMod * level) + (data.bonusHitPoints ?? 0) + (hpPerLevelBonus * level)
 
   const allModifiers = [
     ...(data.modifiers?.race ?? []),
