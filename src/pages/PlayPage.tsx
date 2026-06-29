@@ -554,19 +554,21 @@ export function PlayPage() {
         </div>
 
         <div className="flex items-center gap-1">
-          {/* AI provider toggle */}
-          <button
-            onClick={() => {
-              const next: AiProvider = aiProvider === 'claude' ? 'openai' : 'claude'
-              setAiProvider(next)
-              if (id) supabase.from('campaigns').update({ ai_provider: next }).eq('id', id).then()
-            }}
-            className="flex items-center gap-1 rounded px-2 py-1 text-[10px] text-mist hover:text-parchment transition-colors focus-ring"
-            aria-label={`Byt AI-modell, nuvarande: ${aiProvider === 'claude' ? 'Claude' : 'GPT-4o mini'}`}
-          >
-            <Bot className="h-3 w-3" aria-hidden="true" />
-            <span>{aiProvider === 'claude' ? 'Claude' : 'GPT-4o'}</span>
-          </button>
+          {/* AI provider toggle – admin only */}
+          {user.email === 'marcus.hultberg@live.se' && (
+            <button
+              onClick={() => {
+                const next: AiProvider = aiProvider === 'claude' ? 'openai' : 'claude'
+                setAiProvider(next)
+                if (id) supabase.from('campaigns').update({ ai_provider: next }).eq('id', id).then()
+              }}
+              className="flex items-center gap-1 rounded px-2 py-1 text-[10px] text-mist hover:text-parchment transition-colors focus-ring"
+              aria-label={`Byt AI-modell, nuvarande: ${aiProvider === 'claude' ? 'Claude' : 'GPT-5.5'}`}
+            >
+              <Bot className="h-3 w-3" aria-hidden="true" />
+              <span>{aiProvider === 'claude' ? 'Claude' : 'GPT-5.5'}</span>
+            </button>
+          )}
 
           <div className="h-3 w-px bg-navy/30" />
 

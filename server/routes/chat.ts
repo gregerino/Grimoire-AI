@@ -43,7 +43,7 @@ function streamOpenAI({ systemPrompt, messages, onText, onEnd, onError }: Stream
   ;(async () => {
     try {
       const stream = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.5',
         messages: openaiMessages,
         stream: true,
         max_tokens: MAX_RESPONSE_TOKENS,
