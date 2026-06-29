@@ -96,6 +96,11 @@ const ABILITY_IDS: Record<number, string> = {
   1: 'STR', 2: 'DEX', 3: 'CON', 4: 'INT', 5: 'WIS', 6: 'CHA',
 }
 
+// D&D Beyond uses full names in modifier subTypes, e.g. 'constitution-score'
+const ABILITY_DNDB_NAMES: Record<number, string> = {
+  1: 'strength', 2: 'dexterity', 3: 'constitution', 4: 'intelligence', 5: 'wisdom', 6: 'charisma',
+}
+
 const ABILITY_FULL_NAMES: Record<string, string> = {
   'strength': 'STR', 'dexterity': 'DEX', 'constitution': 'CON',
   'intelligence': 'INT', 'wisdom': 'WIS', 'charisma': 'CHA',
@@ -161,7 +166,7 @@ function getAbilityScore(data: DndbCharacterData, abilityId: number): number {
     ...(data.modifiers?.background ?? []),
   ]
 
-  const abilityName = ABILITY_IDS[abilityId]?.toLowerCase()
+  const abilityName = ABILITY_DNDB_NAMES[abilityId]
   for (const mod of allMods) {
     if (mod.type === 'bonus' && mod.subType === `${abilityName}-score` && mod.value) {
       modBonus += mod.value
@@ -251,9 +256,7 @@ function mapToCharacterSheet(data: DndbCharacterData): CharacterSheet {
   }
 
   const conMod = abilityMod(stats.CON)
-  // D&D Beyond's baseHitPoints already includes the CON modifier per level.
-  // bonusHitPoints covers feats like Tough (+2 per level).
-  const maxHp = (data.overrideHitPoints ?? data.baseHitPoints) + (data.bonusHitPoints ?? 0)
+  const maxHp = (data.overrideHitPoints ?? data.baseHitPoints) + (conMod * level) + (data.bonusHitPoints ?? 0)
 
   const allModifiers = [
     ...(data.modifiers?.race ?? []),
