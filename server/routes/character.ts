@@ -269,6 +269,35 @@ characterRoutes.delete('/:campaignId', async (req: Request, res: Response): Prom
   res.json({ success: true })
 })
 
+// GET /api/character/debug-dndb/:characterId — returns raw D&D Beyond data (temporary debug)
+characterRoutes.get('/debug-dndb/:characterId', async (req: Request, res: Response): Promise<void> => {
+  const { characterId } = req.params
+  try {
+    const dndbRes = await fetch(`https://character-service.dndbeyond.com/character/v5/character/${characterId}`, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Grimoire-AI/1.0' },
+    })
+    const json = await dndbRes.json()
+    const d = json.data
+    res.json({
+      baseHitPoints: d.baseHitPoints,
+      overrideHitPoints: d.overrideHitPoints,
+      bonusHitPoints: d.bonusHitPoints,
+      removedHitPoints: d.removedHitPoints,
+      temporaryHitPoints: d.temporaryHitPoints,
+      stats: d.stats,
+      bonusStats: d.bonusStats,
+      overrideStats: d.overrideStats,
+      classes: d.classes?.map((c: { definition: { name: string }; level: number }) => ({ name: c.definition?.name, level: c.level })),
+      modifiers_race: d.modifiers?.race?.filter((m: { subType: string }) => m.subType?.includes('score')),
+      modifiers_class: d.modifiers?.class?.filter((m: { subType: string }) => m.subType?.includes('score')),
+      modifiers_feat: d.modifiers?.feat?.filter((m: { subType: string }) => m.subType?.includes('score')),
+      modifiers_background: d.modifiers?.background?.filter((m: { subType: string }) => m.subType?.includes('score')),
+    })
+  } catch (err) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
 // GET /api/character/:campaignId — get saved character sheet
 characterRoutes.get('/:campaignId', async (req: Request, res: Response): Promise<void> => {
   const { campaignId } = req.params
