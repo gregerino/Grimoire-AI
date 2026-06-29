@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Shield, Swords, MapPin, ScrollText, RefreshCw, Loader2, Link, LinkOff, ExternalLink } from 'lucide-react'
+import { Shield, Swords, MapPin, ScrollText, RefreshCw, Loader2, Link, Unlink, ExternalLink } from 'lucide-react'
 import { getCharacterSheet, syncCharacterFromDndb, deleteCharacterSheet } from '@/lib/api'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { Campaign } from '@/types/database'
@@ -129,7 +129,7 @@ export function OverviewTab({ campaign }: Props) {
                   onClick={() => setShowUnlinkConfirm(true)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-navy px-3 py-2 text-xs text-gray-400 transition-colors hover:border-red-500/30 hover:text-red-400"
                 >
-                  <LinkOff className="h-3.5 w-3.5" />
+                  <Unlink className="h-3.5 w-3.5" />
                   Ta bort synkning
                 </button>
               </div>
