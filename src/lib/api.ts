@@ -126,7 +126,7 @@ function sanitizeFilename(name: string): string {
     .replace(/[^\w\s.\-()]/g, '_')
 }
 
-const CHUNK_SIZE = 40 * 1024 * 1024
+const CHUNK_SIZE = 5 * 1024 * 1024
 
 export async function uploadRulebook(file: File, userId: string) {
   const safeName = sanitizeFilename(file.name)
@@ -135,19 +135,17 @@ export async function uploadRulebook(file: File, userId: string) {
   const { supabase } = await import('./supabase')
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
 
-  if (totalChunks <= 1) {
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE
+    const end = Math.min(start + CHUNK_SIZE, file.size)
+    const chunk = file.slice(start, end)
+    const path = totalChunks === 1 ? basePath : `${basePath}/part-${i}`
+    const contentType = totalChunks === 1 ? 'application/pdf' : 'application/octet-stream'
+
     const { error } = await supabase.storage
       .from('pdfs')
-      .upload(basePath, file, { contentType: 'application/pdf' })
-    if (error) throw new Error(`Storage upload failed: ${error.message}`)
-  } else {
-    for (let i = 0; i < totalChunks; i++) {
-      const chunk = file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size))
-      const { error } = await supabase.storage
-        .from('pdfs')
-        .upload(`${basePath}/part-${i}`, chunk, { contentType: 'application/octet-stream' })
-      if (error) throw new Error(`Storage upload failed (part ${i + 1}/${totalChunks}): ${error.message}`)
-    }
+      .upload(path, chunk, { contentType })
+    if (error) throw new Error(`Storage upload failed (${i + 1}/${totalChunks}): ${error.message}`)
   }
 
   return jsonFetch(`${API_BASE}/rulebook/process`, {
