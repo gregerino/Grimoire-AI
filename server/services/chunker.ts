@@ -14,8 +14,18 @@ export async function parsePdfToChunks(
   buffer: Buffer,
   filename: string
 ): Promise<Chunk[]> {
-  // Dynamic import so pdf-parse doesn't crash the server at startup
-  // (it requires DOMMatrix which isn't available in serverless environments)
+  if (typeof globalThis.DOMMatrix === 'undefined') {
+    // @ts-expect-error stub for pdf-parse in serverless (text extraction only)
+    globalThis.DOMMatrix = class DOMMatrix { constructor() { return Object.create(null) } }
+  }
+  if (typeof globalThis.Path2D === 'undefined') {
+    // @ts-expect-error stub
+    globalThis.Path2D = class Path2D {}
+  }
+  if (typeof globalThis.ImageData === 'undefined') {
+    // @ts-expect-error stub
+    globalThis.ImageData = class ImageData { constructor(public width = 0, public height = 0) {} }
+  }
   const pdfParse = (await import('pdf-parse')).default as unknown as (buf: Buffer) => Promise<{ text: string; numpages: number }>
   const result = await pdfParse(buffer)
 
