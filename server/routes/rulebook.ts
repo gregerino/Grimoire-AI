@@ -5,28 +5,6 @@ import { embedAndStoreRulebook } from '../services/embedder'
 
 export const rulebookRoutes = Router()
 
-rulebookRoutes.post('/signed-url', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { user_id: userId, filename } = req.body
-    if (!userId || !filename) {
-      res.status(400).json({ error: 'Missing user_id or filename' })
-      return
-    }
-    const storagePath = `${userId}/rulebooks/${Date.now()}-${filename}`
-    const { data, error } = await supabaseAdmin.storage
-      .from('pdfs')
-      .createSignedUploadUrl(storagePath)
-    if (error || !data) {
-      res.status(500).json({ error: `Failed to create upload URL: ${error?.message}` })
-      return
-    }
-    res.json({ signedUrl: data.signedUrl, token: data.token, path: data.path, storagePath })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    res.status(500).json({ error: message })
-  }
-})
-
 rulebookRoutes.post('/process', async (req: Request, res: Response): Promise<void> => {
   try {
     const { user_id: userId, storage_path: storagePath, filename } = req.body

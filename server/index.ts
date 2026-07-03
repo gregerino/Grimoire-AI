@@ -57,6 +57,11 @@ app.use((err: Error, _req: import('express').Request, res: import('express').Res
   res.status(500).json({ error: err.message || 'Internal server error' })
 })
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Grimoire server running on port ${PORT}`)
+
+  const { supabaseAdmin } = await import('./lib/supabase-admin')
+  await supabaseAdmin.storage.updateBucket('pdfs', { fileSizeLimit: 524288000 })
+    .then(() => console.log('PDF bucket size limit set to 500MB'))
+    .catch((err: unknown) => console.warn('Could not update PDF bucket limit:', err))
 })

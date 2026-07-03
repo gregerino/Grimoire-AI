@@ -128,28 +128,21 @@ function sanitizeFilename(name: string): string {
 
 export async function uploadRulebook(file: File, userId: string) {
   const safeName = sanitizeFilename(file.name)
-  const { signedUrl, storagePath } = await jsonFetch(`${API_BASE}/rulebook/signed-url`, {
-    method: 'POST',
-    body: JSON.stringify({ user_id: userId, filename: safeName }),
-  })
+  const storagePath = `${userId}/rulebooks/${Date.now()}-${safeName}`
 
-  const uploadRes = await fetch(signedUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/pdf' },
-    body: file,
-  })
+  const { supabase } = await import('./supabase')
+  const { error: uploadError } = await supabase.storage
+    .from('pdfs')
+    .upload(storagePath, file, { contentType: 'application/pdf', duplex: 'half' } as Record<string, unknown>)
 
-  if (!uploadRes.ok) {
-    const text = await uploadRes.text()
-    throw new Error(`Storage upload failed (${uploadRes.status}): ${text}`)
-  }
+  if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`)
 
   return jsonFetch(`${API_BASE}/rulebook/process`, {
     method: 'POST',
     body: JSON.stringify({
       user_id: userId,
       storage_path: storagePath,
-      filename: file.name,
+      filename: safeName,
     }),
   })
 }
