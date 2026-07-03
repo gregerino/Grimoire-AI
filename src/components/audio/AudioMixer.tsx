@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Volume2, VolumeX, VolumeOff, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAudioStore } from '@/stores/audioStore'
 import { useSpeechStore, type TtsLanguage } from '@/stores/speechStore'
 import type { TtsTemperature } from '@/stores/speechStore'
-import { fetchTtsAudio, fetchTtsVoices, type TtsVoice } from '@/lib/api'
+import { fetchTtsAudio } from '@/lib/api'
 
 const NARRATOR_PREVIEW = 'Hello there! I am your narrator for this campaign. Lets go on an adventure together.'
 
@@ -77,23 +77,11 @@ export function AudioMixer() {
     ttsTemperature,
     setEnabled,
     setAutoRead,
-    setDefaultVoiceId,
     setTtsLanguage,
     setTtsVolume,
     setTtsTemperature,
   } = useSpeechStore()
   const [playing, setPlaying] = useState(false)
-  const [voices, setVoices] = useState<TtsVoice[]>([])
-  const [loadingVoices, setLoadingVoices] = useState(false)
-
-  useEffect(() => {
-    if (!speechEnabled) return
-    setLoadingVoices(true)
-    fetchTtsVoices()
-      .then(setVoices)
-      .catch(() => {})
-      .finally(() => setLoadingVoices(false))
-  }, [speechEnabled])
 
   const playNarratorPreview = async () => {
     if (playing) return
@@ -254,39 +242,21 @@ export function AudioMixer() {
 
             <div className="space-y-1">
               <label className="text-xs text-gray-400">Narrator voice</label>
-              {loadingVoices ? (
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Loading voices...
-                </div>
-              ) : (
-                <>
-                  <select
-                    value={defaultVoiceId ?? ''}
-                    onChange={(e) => setDefaultVoiceId(e.target.value || null)}
-                    className="w-full rounded border border-navy bg-dark-navy px-2 py-1.5 text-xs text-parchment focus:border-gold/50 focus:outline-none"
-                  >
-                    <option value="">Amelia Tyler / BG3 (default)</option>
-                    {voices.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} {v.description ? `— ${v.description}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={playNarratorPreview}
-                    disabled={playing}
-                    className="mt-1.5 flex w-full items-center justify-center gap-2 rounded border border-navy px-2 py-2 text-xs text-gold/60 hover:border-gold/30 hover:bg-gold/5 hover:text-gold disabled:opacity-50 transition-colors"
-                  >
-                    {playing ? (
-                      <Loader2 className="h-3 w-3 animate-spin text-gold" />
-                    ) : (
-                      <Volume2 className="h-3 w-3" />
-                    )}
-                    <span>Preview voice</span>
-                  </button>
-                </>
-              )}
+              <div className="flex items-center justify-between rounded border border-navy bg-dark-navy px-2 py-1.5">
+                <span className="text-xs text-parchment">Amelia Tyler / BG3</span>
+                <button
+                  onClick={playNarratorPreview}
+                  disabled={playing}
+                  className="flex items-center gap-1.5 text-xs text-gold/60 hover:text-gold disabled:opacity-50 transition-colors"
+                >
+                  {playing ? (
+                    <Loader2 className="h-3 w-3 animate-spin text-gold" />
+                  ) : (
+                    <Volume2 className="h-3 w-3" />
+                  )}
+                  <span>Preview</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1.5">
