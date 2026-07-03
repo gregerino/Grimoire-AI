@@ -119,18 +119,17 @@ export async function ragSearch(query: string, campaignId: string) {
 // --- Rulebooks ---
 
 export async function uploadRulebook(file: File, userId: string) {
-  const { signedUrl, storagePath } = await jsonFetch(`${API_BASE}/rulebook/signed-url`, {
+  const { token, storagePath } = await jsonFetch(`${API_BASE}/rulebook/signed-url`, {
     method: 'POST',
     body: JSON.stringify({ user_id: userId, filename: file.name }),
   })
 
-  const uploadRes = await fetch(signedUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/pdf' },
-    body: file,
-  })
+  const { supabase } = await import('./supabase')
+  const { error: uploadError } = await supabase.storage
+    .from('pdfs')
+    .uploadToSignedUrl(storagePath, token, file, { contentType: 'application/pdf' })
 
-  if (!uploadRes.ok) throw new Error(`Storage upload failed (${uploadRes.status})`)
+  if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`)
 
   return jsonFetch(`${API_BASE}/rulebook/process`, {
     method: 'POST',
