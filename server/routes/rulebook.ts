@@ -7,7 +7,7 @@ export const rulebookRoutes = Router()
 
 rulebookRoutes.post('/process', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { user_id: userId, storage_path: storagePath, filename } = req.body
+    const { user_id: userId, storage_path: storagePath, filename, total_chunks: totalChunks } = req.body
 
     if (!userId || !storagePath || !filename) {
       res.status(400).json({ error: 'Missing user_id, storage_path, or filename' })
@@ -32,31 +32,44 @@ rulebookRoutes.post('/process', async (req: Request, res: Response): Promise<voi
 
     res.json({ rulebook: record, message: 'Upload started, processing in background' })
 
-    processInBackground(record.id, storagePath, filename, userId)
+    processInBackground(record.id, storagePath, filename, userId, totalChunks)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     res.status(500).json({ error: message })
   }
 })
 
+async function downloadFromStorage(storagePath: string, totalChunks?: number): Promise<Buffer> {
+  if (totalChunks && totalChunks > 1) {
+    const parts: Buffer[] = []
+    for (let i = 0; i < totalChunks; i++) {
+      const { data, error } = await supabaseAdmin.storage
+        .from('pdfs')
+        .download(`${storagePath}/part-${i}`)
+      if (error || !data) throw new Error(`Failed to download part ${i}: ${error?.message}`)
+      parts.push(Buffer.from(await data.arrayBuffer()))
+    }
+    // Clean up chunk files
+    const chunkPaths = Array.from({ length: totalChunks }, (_, i) => `${storagePath}/part-${i}`)
+    await supabaseAdmin.storage.from('pdfs').remove(chunkPaths)
+    return Buffer.concat(parts)
+  }
+  const { data, error } = await supabaseAdmin.storage.from('pdfs').download(storagePath)
+  if (error || !data) throw new Error(`Failed to download from storage: ${error?.message}`)
+  return Buffer.from(await data.arrayBuffer())
+}
+
 async function processInBackground(
   rulebookId: string,
   storagePath: string,
   filename: string,
-  userId: string
+  userId: string,
+  totalChunks?: number
 ) {
   try {
-    console.log(`Processing rulebook: ${filename}`)
+    console.log(`Processing rulebook: ${filename}${totalChunks ? ` (${totalChunks} chunks)` : ''}`)
 
-    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
-      .from('pdfs')
-      .download(storagePath)
-
-    if (downloadError || !fileData) {
-      throw new Error(`Failed to download from storage: ${downloadError?.message}`)
-    }
-
-    const buffer = Buffer.from(await fileData.arrayBuffer())
+    const buffer = await downloadFromStorage(storagePath, totalChunks)
     const chunks = await parsePdfToChunks(buffer, filename)
     console.log(`Parsed ${chunks.length} chunks from rulebook ${filename}`)
 

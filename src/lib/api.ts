@@ -126,44 +126,37 @@ function sanitizeFilename(name: string): string {
     .replace(/[^\w\s.\-()]/g, '_')
 }
 
+const CHUNK_SIZE = 40 * 1024 * 1024
+
 export async function uploadRulebook(file: File, userId: string) {
   const safeName = sanitizeFilename(file.name)
-  const storagePath = `${userId}/rulebooks/${Date.now()}-${safeName}`
+  const basePath = `${userId}/rulebooks/${Date.now()}-${safeName}`
 
   const { supabase } = await import('./supabase')
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Not authenticated')
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
 
-  const { Upload } = await import('tus-js-client')
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-
-  await new Promise<void>((resolve, reject) => {
-    const upload = new Upload(file, {
-      endpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
-      retryDelays: [0, 3000, 5000],
-      headers: {
-        authorization: `Bearer ${session.access_token}`,
-      },
-      uploadDataDuringCreation: true,
-      removeFingerprintOnSuccess: true,
-      metadata: {
-        bucketName: 'pdfs',
-        objectName: storagePath,
-        contentType: 'application/pdf',
-      },
-      chunkSize: 6 * 1024 * 1024,
-      onError: reject,
-      onSuccess: () => resolve(),
-    })
-    upload.start()
-  })
+  if (totalChunks <= 1) {
+    const { error } = await supabase.storage
+      .from('pdfs')
+      .upload(basePath, file, { contentType: 'application/pdf' })
+    if (error) throw new Error(`Storage upload failed: ${error.message}`)
+  } else {
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size))
+      const { error } = await supabase.storage
+        .from('pdfs')
+        .upload(`${basePath}/part-${i}`, chunk, { contentType: 'application/octet-stream' })
+      if (error) throw new Error(`Storage upload failed (part ${i + 1}/${totalChunks}): ${error.message}`)
+    }
+  }
 
   return jsonFetch(`${API_BASE}/rulebook/process`, {
     method: 'POST',
     body: JSON.stringify({
       user_id: userId,
-      storage_path: storagePath,
+      storage_path: basePath,
       filename: safeName,
+      total_chunks: totalChunks > 1 ? totalChunks : undefined,
     }),
   })
 }
