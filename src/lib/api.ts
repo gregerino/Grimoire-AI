@@ -131,11 +131,32 @@ export async function uploadRulebook(file: File, userId: string) {
   const storagePath = `${userId}/rulebooks/${Date.now()}-${safeName}`
 
   const { supabase } = await import('./supabase')
-  const { error: uploadError } = await supabase.storage
-    .from('pdfs')
-    .upload(storagePath, file, { contentType: 'application/pdf', duplex: 'half' } as Record<string, unknown>)
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Not authenticated')
 
-  if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`)
+  const { Upload } = await import('tus-js-client')
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
+  await new Promise<void>((resolve, reject) => {
+    const upload = new Upload(file, {
+      endpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
+      retryDelays: [0, 3000, 5000],
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      metadata: {
+        bucketName: 'pdfs',
+        objectName: storagePath,
+        contentType: 'application/pdf',
+      },
+      chunkSize: 6 * 1024 * 1024,
+      onError: reject,
+      onSuccess: () => resolve(),
+    })
+    upload.start()
+  })
 
   return jsonFetch(`${API_BASE}/rulebook/process`, {
     method: 'POST',
