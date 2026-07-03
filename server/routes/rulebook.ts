@@ -1,97 +1,62 @@
 import { Router, Request, Response } from 'express'
-import multer from 'multer'
 import { supabaseAdmin } from '../lib/supabase-admin'
 import { parsePdfToChunks } from '../services/chunker'
 import { embedAndStoreRulebook } from '../services/embedder'
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 400 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true)
-    } else {
-      cb(new Error('Only PDF files are allowed'))
-    }
-  },
-})
-
 export const rulebookRoutes = Router()
 
-rulebookRoutes.post(
-  '/upload',
-  (req: Request, res: Response, next) => {
-    upload.single('file')(req, res, (err) => {
-      if (err) {
-        const msg = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
-          ? 'File too large (max 400MB)'
-          : err.message || 'Upload error'
-        res.status(413).json({ error: msg })
-        return
-      }
-      next()
-    })
-  },
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const file = req.file
-      const userId = req.body.user_id
+rulebookRoutes.post('/process', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { user_id: userId, storage_path: storagePath, filename } = req.body
 
-      if (!file || !userId) {
-        res.status(400).json({ error: 'Missing file or user_id' })
-        return
-      }
-
-      const storagePath = `${userId}/rulebooks/${Date.now()}-${file.originalname}`
-
-      let storageUploaded = false
-      const { error: storageError } = await supabaseAdmin.storage
-        .from('pdfs')
-        .upload(storagePath, file.buffer, { contentType: 'application/pdf' })
-
-      if (storageError) {
-        console.warn(`Storage upload skipped for ${file.originalname}: ${storageError.message}`)
-      } else {
-        storageUploaded = true
-      }
-
-      const { data: record, error: insertError } = await supabaseAdmin
-        .from('rulebooks')
-        .insert({
-          user_id: userId,
-          filename: file.originalname,
-          storage_path: storageUploaded ? storagePath : `local-only/${file.originalname}`,
-          status: 'processing',
-        })
-        .select()
-        .single()
-
-      if (insertError || !record) {
-        res.status(500).json({ error: `DB insert failed: ${insertError?.message}` })
-        return
-      }
-
-      const msg = storageUploaded
-        ? 'Upload started, processing in background'
-        : 'File too large for storage — indexing directly'
-      res.json({ rulebook: record, message: msg })
-
-      processInBackground(record.id, file.buffer, file.originalname, userId)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      res.status(500).json({ error: message })
+    if (!userId || !storagePath || !filename) {
+      res.status(400).json({ error: 'Missing user_id, storage_path, or filename' })
+      return
     }
+
+    const { data: record, error: insertError } = await supabaseAdmin
+      .from('rulebooks')
+      .insert({
+        user_id: userId,
+        filename,
+        storage_path: storagePath,
+        status: 'processing',
+      })
+      .select()
+      .single()
+
+    if (insertError || !record) {
+      res.status(500).json({ error: `DB insert failed: ${insertError?.message}` })
+      return
+    }
+
+    res.json({ rulebook: record, message: 'Upload started, processing in background' })
+
+    processInBackground(record.id, storagePath, filename, userId)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    res.status(500).json({ error: message })
   }
-)
+})
 
 async function processInBackground(
   rulebookId: string,
-  buffer: Buffer,
+  storagePath: string,
   filename: string,
   userId: string
 ) {
   try {
     console.log(`Processing rulebook: ${filename}`)
+
+    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+      .from('pdfs')
+      .download(storagePath)
+
+    if (downloadError || !fileData) {
+      throw new Error(`Failed to download from storage: ${downloadError?.message}`)
+    }
+
+    const buffer = Buffer.from(await fileData.arrayBuffer())
     const chunks = await parsePdfToChunks(buffer, filename)
     console.log(`Parsed ${chunks.length} chunks from rulebook ${filename}`)
 

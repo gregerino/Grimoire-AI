@@ -25,6 +25,6 @@ export function toFantasyError(error: unknown): string {
   if (msg.includes('timeout') || msg.includes('Timeout')) return fantasyErrors.sessionTimeout
   if (msg.includes('401') || msg.includes('Unauthorized')) return fantasyErrors.unauthorized
   if (msg.includes('404') || msg.includes('Not Found')) return fantasyErrors.notFound
-  if (msg.includes('Upload') || msg.includes('upload')) return fantasyErrors.uploadFailed
+  if (msg.includes('Upload') || msg.includes('upload') || msg.includes('Storage')) return fantasyErrors.uploadFailed
   return fantasyErrors.apiError
 }
