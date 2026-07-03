@@ -62,9 +62,7 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
       setSelectedFile(null)
       fetchRulebooks()
     } catch (err) {
-      console.error('[RulebookUpload] Raw error:', err)
-      const raw = err instanceof Error ? err.message : String(err)
-      setError(`${toFantasyError(err)} [DEBUG: ${raw}]`)
+      setError(toFantasyError(err))
     } finally {
       setUploading(false)
     }

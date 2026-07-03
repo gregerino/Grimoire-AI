@@ -118,10 +118,19 @@ export async function ragSearch(query: string, campaignId: string) {
 
 // --- Rulebooks ---
 
+function sanitizeFilename(name: string): string {
+  return name
+    .normalize('NFKD')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[^\w\s.\-()]/g, '_')
+}
+
 export async function uploadRulebook(file: File, userId: string) {
+  const safeName = sanitizeFilename(file.name)
   const { signedUrl, storagePath } = await jsonFetch(`${API_BASE}/rulebook/signed-url`, {
     method: 'POST',
-    body: JSON.stringify({ user_id: userId, filename: file.name }),
+    body: JSON.stringify({ user_id: userId, filename: safeName }),
   })
 
   const uploadRes = await fetch(signedUrl, {
