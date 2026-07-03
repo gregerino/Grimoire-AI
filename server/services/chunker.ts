@@ -26,8 +26,10 @@ export async function parsePdfToChunks(
     // @ts-expect-error stub
     globalThis.ImageData = class ImageData { constructor(public width = 0, public height = 0) {} }
   }
-  const pdfParse = (await import('pdf-parse')).default as unknown as (buf: Buffer) => Promise<{ text: string; numpages: number }>
-  const result = await pdfParse(buffer)
+  const { PDFParse } = await import('pdf-parse')
+  const parser = new PDFParse({ data: new Uint8Array(buffer) })
+  const result = await parser.getText()
+  const numpages = result.total
 
   if (!result.text.trim()) {
     throw new Error('PDF contains no extractable text')
@@ -45,7 +47,7 @@ export async function parsePdfToChunks(
     content: doc.pageContent,
     metadata: {
       page_start: 1,
-      page_end: result.numpages,
+      page_end: numpages,
       chunk_index: i,
       filename,
     },
