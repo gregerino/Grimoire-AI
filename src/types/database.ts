@@ -60,6 +60,38 @@ export interface Npc {
   created_at: string
 }
 
+export type SidekickKit = 'expert' | 'spellcaster' | 'warrior'
+
+export interface SidekickStats {
+  str: number
+  dex: number
+  con: number
+  int: number
+  wis: number
+  cha: number
+}
+
+export interface Sidekick {
+  id: string
+  campaign_id: string
+  npc_id: string | null
+  name: string
+  kit: SidekickKit
+  base_creature: string | null
+  level: number
+  proficiency_bonus: number
+  stats: SidekickStats
+  current_hp: number
+  max_hp: number
+  ac: number
+  speed: number
+  features: string[]
+  is_active: boolean
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface QuestReward {
   gp?: number
   items?: string[]

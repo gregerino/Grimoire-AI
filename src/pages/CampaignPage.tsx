@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen, Brain, Shield, StickyNote, HelpCircle } from 'lucide-react'
+import { Play, ArrowLeft, User, Swords, ScrollText, Package, FileText, Pencil, Trash2, BookOpen, Brain, Shield, StickyNote, HelpCircle, Users } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { supabase } from '@/lib/supabase'
 import { OverviewTab } from '@/components/campaign/tabs/OverviewTab'
 import { NpcTab } from '@/components/campaign/tabs/NpcTab'
+import { SidekickTab } from '@/components/campaign/tabs/SidekickTab'
 import { QuestTab } from '@/components/campaign/tabs/QuestTab'
 import { InventoryTab } from '@/components/campaign/tabs/InventoryTab'
 import { PdfLibrary } from '@/components/pdf/PdfLibrary'
@@ -21,13 +22,14 @@ import { HowToGuide } from '@/components/HowToGuide'
 import { listSessions } from '@/lib/api'
 import type { Campaign, Session } from '@/types/database'
 
-type Tab = 'overview' | 'character' | 'npcs' | 'quests' | 'inventory' | 'library' | 'sessions' | 'memory' | 'notes'
+type Tab = 'overview' | 'character' | 'npcs' | 'sidekicks' | 'quests' | 'inventory' | 'library' | 'sessions' | 'memory' | 'notes'
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'overview', label: 'Overview', icon: <User className="h-4 w-4" /> },
   { id: 'character', label: 'Character', icon: <Shield className="h-4 w-4" /> },
   { id: 'sessions', label: 'Sessions', icon: <BookOpen className="h-4 w-4" /> },
   { id: 'npcs', label: 'NPCs', icon: <Swords className="h-4 w-4" /> },
+  { id: 'sidekicks', label: 'Sidekicks', icon: <Users className="h-4 w-4" /> },
   { id: 'quests', label: 'Quests', icon: <ScrollText className="h-4 w-4" /> },
   { id: 'inventory', label: 'Inventory', icon: <Package className="h-4 w-4" /> },
   { id: 'notes', label: 'Notes', icon: <StickyNote className="h-4 w-4" /> },
@@ -182,6 +184,7 @@ export function CampaignPage() {
         {activeTab === 'overview' && <OverviewTab campaign={campaign} />}
         {activeTab === 'character' && <CharacterPanel campaignId={id} />}
         {activeTab === 'npcs' && <NpcTab campaignId={id} />}
+        {activeTab === 'sidekicks' && <SidekickTab campaignId={id} partyLevel={campaign.character_level} />}
         {activeTab === 'quests' && <QuestTab campaignId={id} />}
         {activeTab === 'inventory' && <InventoryTab campaignId={id} />}
         {activeTab === 'sessions' && (

@@ -334,6 +334,28 @@ export function aiUpdateNpc(npcId: string, context: string, userId?: string) {
   })
 }
 
+// --- Sidekick ---
+
+export function createSidekick(payload: {
+  campaign_id: string
+  name: string
+  kit: 'expert' | 'spellcaster' | 'warrior'
+  level: number
+  stats: { str: number; dex: number; con: number; int: number; wis: number; cha: number }
+}) {
+  return jsonFetch(`${API_BASE}/sidekick`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function levelUpSidekick(sidekickId: string, level: number) {
+  return jsonFetch(`${API_BASE}/sidekick/${sidekickId}/level`, {
+    method: 'PATCH',
+    body: JSON.stringify({ level }),
+  })
+}
+
 // --- Image Generation ---
 
 export async function generateNpcPortrait(

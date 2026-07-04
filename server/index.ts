@@ -18,6 +18,7 @@ import { memoryRoutes } from './routes/memory'
 import { tavernRoutes } from './routes/tavern'
 import { lootRoutes } from './routes/loot'
 import { rulebookRoutes } from './routes/rulebook'
+import { sidekickRoutes } from './routes/sidekick'
 
 dotenv.config()
 initServerSentry()
@@ -44,6 +45,7 @@ app.use('/api/memory', memoryRoutes)
 app.use('/api/tavern', tavernRoutes)
 app.use('/api/loot', lootRoutes)
 app.use('/api/rulebook', rulebookRoutes)
+app.use('/api/sidekick', sidekickRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' })
