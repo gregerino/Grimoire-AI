@@ -57,6 +57,7 @@ export function PdfUpload({ campaignId, userId, onUploadComplete }: PdfUploadPro
       setSelectedFile(null)
       onUploadComplete()
     } catch (err) {
+      console.error('PDF upload failed:', err)
       setError(toFantasyError(err))
     } finally {
       setUploading(false)

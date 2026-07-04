@@ -62,6 +62,7 @@ export function RulebookLibrary({ userId }: RulebookLibraryProps) {
       setSelectedFile(null)
       fetchRulebooks()
     } catch (err) {
+      console.error('Rulebook upload failed:', err)
       setError(toFantasyError(err))
     } finally {
       setUploading(false)

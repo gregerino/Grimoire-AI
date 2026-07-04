@@ -55,28 +55,35 @@ export async function uploadPdf(
   campaignId: string,
   userId: string
 ) {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('campaign_id', campaignId)
-  formData.append('user_id', userId)
+  const safeName = sanitizeFilename(file.name)
+  const basePath = `${userId}/${campaignId}/${Date.now()}-${safeName}`
 
-  const res = await fetch(`${API_BASE}/pdf/upload`, {
-    method: 'POST',
-    body: formData,
-  })
+  const { supabase } = await import('./supabase')
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
 
-  if (!res.ok) {
-    const text = await res.text()
-    let msg = 'Upload failed'
-    try {
-      msg = JSON.parse(text).error || msg
-    } catch {
-      msg = text.startsWith('<') ? `Server returned HTML (status ${res.status}) — is the backend running on ${API_BASE}?` : text
-    }
-    throw new Error(msg)
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE
+    const end = Math.min(start + CHUNK_SIZE, file.size)
+    const chunk = file.slice(start, end)
+    const path = totalChunks === 1 ? basePath : `${basePath}/part-${i}`
+    const contentType = totalChunks === 1 ? 'application/pdf' : 'application/octet-stream'
+
+    const { error } = await supabase.storage
+      .from('pdfs')
+      .upload(path, chunk, { contentType })
+    if (error) throw new Error(`Storage upload failed (${i + 1}/${totalChunks}): ${error.message}`)
   }
 
-  return res.json()
+  return jsonFetch(`${API_BASE}/pdf/process`, {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: userId,
+      campaign_id: campaignId,
+      storage_path: basePath,
+      filename: safeName,
+      total_chunks: totalChunks > 1 ? totalChunks : undefined,
+    }),
+  })
 }
 
 export async function listPdfs(campaignId: string) {
