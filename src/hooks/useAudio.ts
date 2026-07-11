@@ -5,23 +5,25 @@ import type { AmbientType, MusicMood, SfxType } from '@/stores/audioStore'
 
 const FADE_MS = 2000
 
+const AMBIENCE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/ambience`
+
 const AMBIENT_PATHS: Record<AmbientType, string> = {
-  tavern: '/sounds/ambient/tavern.mp3',
-  forest: '/sounds/ambient/forest.mp3',
-  dungeon: '/sounds/ambient/dungeon.mp3',
-  city: '/sounds/ambient/city.mp3',
-  cave: '/sounds/ambient/cave.mp3',
-  field: '/sounds/ambient/field.mp3',
-  sea: '/sounds/ambient/sea.mp3',
+  tavern: `${AMBIENCE_BASE}/ambient/tavern.mp3`,
+  forest: `${AMBIENCE_BASE}/ambient/forest.mp3`,
+  dungeon: `${AMBIENCE_BASE}/ambient/dungeon.mp3`,
+  city: `${AMBIENCE_BASE}/ambient/city.mp3`,
+  cave: `${AMBIENCE_BASE}/ambient/cave.mp3`,
+  field: `${AMBIENCE_BASE}/ambient/field.mp3`,
+  sea: `${AMBIENCE_BASE}/ambient/sea.mp3`,
 }
 
 const MUSIC_PATHS: Record<MusicMood, string> = {
-  exploration: '/sounds/music/exploration.mp3',
-  combat: '/sounds/music/combat.mp3',
-  tension: '/sounds/music/tension.mp3',
-  mystery: '/sounds/music/mystery.mp3',
-  rest: '/sounds/music/rest.mp3',
-  triumph: '/sounds/music/triumph.mp3',
+  exploration: `${AMBIENCE_BASE}/music/exploration.mp3`,
+  combat: `${AMBIENCE_BASE}/music/combat.mp3`,
+  tension: `${AMBIENCE_BASE}/music/tension.mp3`,
+  mystery: `${AMBIENCE_BASE}/music/mystery.mp3`,
+  rest: `${AMBIENCE_BASE}/music/rest.mp3`,
+  triumph: `${AMBIENCE_BASE}/music/triumph.mp3`,
 }
 
 const SFX_PATHS: Record<SfxType, string> = {
@@ -36,7 +38,11 @@ const SFX_PATHS: Record<SfxType, string> = {
 }
 
 function createLoop(src: string): Howl {
-  return new Howl({ src: [src], loop: true, volume: 0, html5: true, preload: true })
+  const howl = new Howl({ src: [src], loop: true, volume: 0, html5: true, preload: true })
+  howl.once('loaderror', (_id, err) => {
+    console.error(`Failed to load audio track: ${src}`, err)
+  })
+  return howl
 }
 
 export function useAudio() {
