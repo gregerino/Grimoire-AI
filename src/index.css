@@ -71,6 +71,21 @@ body {
   font-family: var(--font-display);
 }
 
+/* Semantic narration highlights (see Markdown.tsx) */
+.prose-dm .hl-danger {
+  color: var(--color-blood-light);
+  background: rgba(139, 26, 26, 0.15);
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.125rem;
+}
+
+.prose-dm .hl-clue {
+  color: var(--color-mystic-light);
+  background: rgba(107, 63, 160, 0.15);
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.125rem;
+}
+
 /* Radial gradient utility */
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--tw-gradient-from), var(--tw-gradient-to));

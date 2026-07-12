@@ -49,5 +49,13 @@ function renderMarkdown(text: string): string {
   // Unordered lists
   result = result.replace(/^- (.+)$/gm, '<div class="flex gap-2 ml-2"><span class="text-gold/50">•</span><span>$1</span></div>')
 
+  // Semantic highlights (danger, clue) — DM marks the single most important
+  // phrase in a beat. Closed pairs render as colored spans.
+  result = result.replace(/\[danger\]([\s\S]*?)\[\/danger\]/g, '<span class="hl-danger">$1</span>')
+  result = result.replace(/\[clue\]([\s\S]*?)\[\/clue\]/g, '<span class="hl-clue">$1</span>')
+  // Any tag left over has no matching pair yet (mid-stream) — drop the
+  // marker but keep the text plain until the closing tag arrives.
+  result = result.replace(/\[\/?(?:danger|clue)\]/g, '')
+
   return result
 }
