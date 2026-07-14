@@ -41,8 +41,6 @@ export function NarrativePanel({ messages, streaming, speechEnabled, onSpeak }: 
     prevMessageCountRef.current = messages.length
     if (newMessageAdded) {
       userScrolledRef.current = false
-    }
-    if (!userScrolledRef.current) {
       el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
     }
   }, [messages])
